@@ -89,27 +89,29 @@ jobs:
             ${{ github.workspace }}/VoteBKM.zip
 
   release:
-    needs: build
-    permissions:
-      contents: write
-    runs-on: ubuntu-20.04
-
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: compile
-          path: .
-
-      - name: List files in directory
-        run: ls -la
-
-      - name: Find downloaded artifacts
-        id: find_artifacts
-        run: echo "ARTIFACTS=$(ls | grep '\.zip$')" >> $GITHUB_ENV
-
-      - name: Upload release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ needs.build.outputs.buildnumber }}
-          files: ${{ env.ARTIFACTS }}
+      needs: build
+      permissions:
+        contents: write
+      runs-on: ubuntu-20.04
+  
+      steps:
+        - name: Download build artifact
+          uses: actions/download-artifact@v3
+          with:
+            name: compile
+            path: .
+  
+        - name: List files in directory
+          run: ls -la
+  
+        - name: Find downloaded artifacts
+          id: find_artifacts
+          run: echo "ARTIFACTS=$(ls *.zip | tr '\n' ',')" >> $GITHUB_ENV
+  
+        - name: Upload release
+          uses: softprops/action-gh-release@v1
+          with:
+            tag_name: v${{ needs.build.outputs.buildnumber }}
+            files: ${{ env.ARTIFACTS }}
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
