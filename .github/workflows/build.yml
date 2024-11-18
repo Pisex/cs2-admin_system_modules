@@ -64,7 +64,7 @@ jobs:
             cd $PLUGIN
             mkdir -p build
             cd build
-            python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=../hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
+            python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=./hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
             ambuild
             cd package
             zip -r ${{ github.workspace }}/$PLUGIN.zip addons
