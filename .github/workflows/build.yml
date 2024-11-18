@@ -58,16 +58,18 @@ jobs:
           cd ${{ github.workspace }}
 
       - name: Build plugins
-        run: |
-          PLUGIN_DIRS=("Admins" "Chat" "CheckCheats" "FunCommands" "Hide" "Maps" "Players" "Rcon" "Status" "VoteBKM")
-          for PLUGIN in "${PLUGIN_DIRS[@]}"; do
-            mkdir -p build/$PLUGIN
-            cd build/$PLUGIN
-            python3 ../../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=../../hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
-            ambuild
-            cd ../..
-            zip -r ${{ github.workspace }}/$PLUGIN.zip build/$PLUGIN/package/addons
-          done
+          run: |
+            PLUGIN_DIRS=("Admins" "Chat" "CheckCheats" "FunCommands" "Hide" "Maps" "Players" "Rcon" "Status" "VoteBKM")
+            for PLUGIN in "${PLUGIN_DIRS[@]}"; do
+              cd $PLUGIN
+              mkdir -p build
+              cd build
+              python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=../hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
+              ambuild
+              cd package
+              zip -r ${{ github.workspace }}/$PLUGIN.zip addons
+              cd ../..
+            done
 
       - name: Upload archives to artifact
         uses: actions/upload-artifact@v3
