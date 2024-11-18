@@ -824,7 +824,7 @@ void FunCommands::AllPluginsLoaded()
 		g_pAdminApi->RegisterItem("speed", g_pAdminApi->GetTranslation("Item_Speed"), "players", "@admin/speed", nullptr, OnItemSelect);
 		g_pAdminApi->RegisterItem("god", g_pAdminApi->GetTranslation("Item_God"), "players", "@admin/god", nullptr, OnItemSelect);
 		g_pAdminApi->RegisterItem("bury", g_pAdminApi->GetTranslation("Item_Bury"), "players", "@admin/bury", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("unbury", g_pAdminApi->GetTranslation("Item_Unbury"), "players", "@admin/bury", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("unbury", g_pAdminApi->GetTranslation("Item_Unbury"), "players", "@admin/unbury", nullptr, OnItemSelect);
 		g_pAdminApi->RegisterItem("blind", g_pAdminApi->GetTranslation("Item_Blind"), "players", "@admin/blind", nullptr, OnItemSelect);
 	});
 
