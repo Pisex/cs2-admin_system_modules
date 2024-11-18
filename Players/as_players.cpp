@@ -331,7 +331,7 @@ void WhoPlayer(int iSlot, int iTarget, bool bConsole)
 					g_pUtils->PrintToConsole(iSlot, "%s\n", g_pAdminApi->GetFlagName(flag.c_str()));
 			}
 			else
-				g_pUtils->PrintToChatAll(g_pAdminApi->GetFlagName(flag.c_str()));
+				g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetFlagName(flag.c_str()));
 		}
 	}
 	else
@@ -339,7 +339,7 @@ void WhoPlayer(int iSlot, int iTarget, bool bConsole)
 		if(bConsole)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", g_pAdminApi->GetTranslation("Item_Who_NoFlags"));
 		else
-			g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("Item_Who_NoFlags"));
+			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Item_Who_NoFlags"));
 	}
 	g_pAdminApi->SendAction(iSlot, "who", std::to_string(iTarget).c_str());
 }
