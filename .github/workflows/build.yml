@@ -67,8 +67,9 @@ jobs:
             python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=./hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
             ambuild
             cd package
-            zip -r ${{ github.workspace }}/$PLUGIN.zip addons
-            cd ../..
+            zip -r ${PLUGIN}.zip addons
+            mv ${PLUGIN}.zip ${{ github.workspace }}
+            cd ${{ github.workspace }}
           done
 
       - name: Upload archives to artifact
