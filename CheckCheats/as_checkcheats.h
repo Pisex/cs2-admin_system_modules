@@ -14,6 +14,7 @@
 #include <utlstring.h>
 #include <KeyValues.h>
 #include "CCSPlayerController.h"
+#include "CParticleSystem.h"
 #include "include/menus.h"
 #include "include/admin.h"
 
@@ -69,6 +70,8 @@ private:
 	const char* GetVersion();
 	const char* GetDate();
 	const char* GetLogTag();
+private:
+	void OnCheckTransmit(CCheckTransmitInfo **ppInfoList, int infoCount, CBitVec<16384> &unionTransmitEdicts, const Entity2Networkable_t **pNetworkables, const uint16 *pEntityIndicies, int nEntities, bool bEnablePVSBits);
 };
 
 #endif //_INCLUDE_METAMOD_SOURCE_STUB_PLUGIN_H_

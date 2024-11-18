@@ -34,6 +34,8 @@ const char* g_szAdminMenuCategory;
 const char* g_szAdminMenuFlag;
 
 const char* g_szContactCommand;
+
+const char* g_szOverlay;
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -55,9 +57,15 @@ bool g_bBlockTeamChange[64];
 
 bool g_bAdmin[64];
 
+CHandle<CParticleSystem> g_hOverlays[64];
+
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 ///////////////////////////////////////////
+
+
+SH_DECL_HOOK7_void(ISource2GameEntities, CheckTransmit, SH_NOATTRIB, 0, CCheckTransmitInfo **, int, CBitVec<16384> &, const Entity2Networkable_t **, const uint16 *, int, bool);
+
 
 void CheckMenu(int iSlot);
 
@@ -87,8 +95,8 @@ void SetStage(int iSlot, int iStage)
 	}
 	if(iStage == 1)
 	{
-		g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
 		if(g_iTarget[iSlot] != -1) g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
+		else g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
 	}
 }
 
@@ -142,6 +150,9 @@ bool CheckCheats::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	GET_V_IFACE_ANY(GetEngineFactory, g_pSchemaSystem, ISchemaSystem, SCHEMASYSTEM_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, engine, IVEngineServer2, SOURCE2ENGINETOSERVER_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetFileSystemFactory, g_pFullFileSystem, IFileSystem, FILESYSTEM_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetServerFactory, g_pSource2GameEntities, ISource2GameEntities, SOURCE2GAMEENTITIES_INTERFACE_VERSION);
+
+	SH_ADD_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
 
 	g_SMAPI->AddListener( this, this );
 	
@@ -150,8 +161,35 @@ bool CheckCheats::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	return true;
 }
 
+void CheckCheats::OnCheckTransmit(CCheckTransmitInfo **ppInfoList, int infoCount, CBitVec<16384> &unionTransmitEdicts, const Entity2Networkable_t **pNetworkables, const uint16 *pEntityIndicies, int nEntities, bool bEnablePVSBits)
+{
+	if (!g_pEntitySystem || !g_szOverlay[0])
+		return;
+
+	for (int i = 0; i < infoCount; i++)
+	{
+		auto &pInfo = ppInfoList[i];
+		int iPlayerSlot = (int)*((uint8 *)pInfo + 584);
+		CCSPlayerController* pSelfController = CCSPlayerController::FromSlot(iPlayerSlot);
+		if (!pSelfController || !pSelfController->IsConnected())
+			continue;
+		
+		for (int j = 0; j < 64; j++)
+		{
+			CCSPlayerController* pController = CCSPlayerController::FromSlot(j);
+			if (!pController || j == iPlayerSlot) continue;
+			if(g_hOverlays[j])
+			{
+				CParticleSystem* pEnt = g_hOverlays[j].Get();
+				pInfo->m_pTransmitEntity->Clear(pEnt->entindex());
+			}
+		}
+	}
+}
+
 bool CheckCheats::Unload(char *error, size_t maxlen)
 {
+	SH_REMOVE_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
 	ConVar_Unregister();
 	
 	return true;
@@ -188,6 +226,10 @@ void EndCheckMenu(int iSlot)
 	g_pMenus->SetCallback(hMenu, [](const char* szBack, const char* szFront, int iItem, int iSlot) {
 		if(iItem < 7)
 		{ 
+			int iTarget = g_iTarget[iSlot];
+			if(g_hOverlays[iTarget])
+				g_pUtils->RemoveEntity(g_hOverlays[iTarget]);
+			g_hOverlays[iTarget] = nullptr;
 			int iReason = std::atoi(szBack);
 			if(g_mReasons.find(iReason) != g_mReasons.end())
 			{
@@ -285,6 +327,23 @@ void CheckMenu(int iSlot)
 
 void StartCheck(int iSlot, int iTarget)
 {
+	if(g_szSound[0]) engine->ClientCommand(iTarget, "play %s", g_szSound);
+	if(g_szOverlay[0])
+	{
+		CCSPlayerController* pController = CCSPlayerController::FromSlot(iTarget);
+		if(!pController) return;
+		CCSPlayerPawn* pPlayerPawn = pController->GetPlayerPawn();
+		if(!pPlayerPawn) return;
+		CParticleSystem* pEnt = (CParticleSystem*)g_pUtils->CreateEntityByName("info_particle_system", -1);
+		if(!pEnt) return;
+		pEnt->m_bStartActive(true);
+		pEnt->m_iszEffectName(g_szOverlay);
+		Vector vecOrigin = pPlayerPawn->GetAbsOrigin();
+		g_pUtils->TeleportEntity(pEnt, &vecOrigin, nullptr, nullptr);
+		g_pUtils->DispatchSpawn(pEnt, nullptr);
+		g_pUtils->AcceptEntityInput(pEnt, "FollowEntity", "!activator", pPlayerPawn, pEnt);
+		g_hOverlays[iTarget] = CHandle<CParticleSystem>(pEnt);
+	}
 	if(g_bAutoMove)
 	{
 		g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Notify_SpecAndBlock_Admin"));
@@ -443,8 +502,8 @@ void LoadConfig()
 		g_Leave.iMin = hLeave->GetInt("player_ban_min");
 		g_Leave.iMax = hLeave->GetInt("player_ban_max");
 	}
-
-	g_szSound = hKv->GetString("sound");
+	g_szOverlay = hKv->GetString("overlay", "");
+	g_szSound = hKv->GetString("sound", "");
 	g_bAutoMove = hKv->GetBool("auto_move");
 	const char* szCommands = hKv->GetString("commands");
 	std::vector<std::string> vecCommands = split(std::string(szCommands), "|");
@@ -492,10 +551,22 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 {
 	int iSlot = pEvent->GetInt("userid");
 	int iReason = pEvent->GetInt("reason");
-	if(g_iTarget[iSlot] == -1) return;
+	int iTarget = g_iTarget[iSlot];
+	if(iTarget == -1) return;
+	
+	if(g_bAdmin[iSlot])
+	{
+		if(g_hOverlays[iTarget])
+			g_pUtils->RemoveEntity(g_hOverlays[iTarget]);
+		g_hOverlays[iTarget] = nullptr;
+	} else {
+		if(g_hOverlays[iSlot])
+			g_pUtils->RemoveEntity(g_hOverlays[iSlot]);
+		g_hOverlays[iSlot] = nullptr;
+	}
+
 	if(iReason == 0 || iReason == 1 || iReason == 41 || iReason == 54)
 	{
-		int iTarget = g_iTarget[iSlot];
 		ResetUserData(iSlot);
 		ResetUserData(iTarget);
 		return;
@@ -505,9 +576,9 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 	if(g_Leave.bAutoBan && (g_Leave.iMin <= g_iStage[iSlot] || g_Leave.iMin == -1) && (g_Leave.iMax > g_iStage[iSlot] || g_Leave.iMax == -1))
 	{
 		if(g_bAdmin[iSlot])
-			g_pAdmin->AddPlayerPunishment(g_iTarget[iSlot], RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iSlot);
+			g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iSlot);
 		else
-			g_pAdmin->AddPlayerPunishment(iSlot, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), g_iTarget[iSlot]);
+			g_pAdmin->AddPlayerPunishment(iSlot, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iTarget);
 	}
 	else if(g_Leave.bLeaveMenu && !g_bAdmin[iSlot])
 	{
@@ -522,7 +593,7 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 		}
 		g_pMenus->SetBackMenu(hMenu, false);
 		g_pMenus->SetExitMenu(hMenu, true);
-		g_pMenus->SetCallback(hMenu, [iSteamID, sName](const char* szBack, const char* szFront, int iItem, int iSlot) {
+		g_pMenus->SetCallback(hMenu, [iSteamID, szName = strdup(sName)](const char* szBack, const char* szFront, int iItem, int iSlot) {
 			if(iItem < 7)
 			{
 				int iReason = std::atoi(szBack);
@@ -532,16 +603,15 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 					char szSteamID[64];
 					g_SMAPI->Format(szSteamID, sizeof(szSteamID), "%llu", iSteamID);
 					char szBuffer[128];
-					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%s %i %s", szSteamID, sName, sReason.iTime, sReason.sReason2.c_str());
+					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%s %s %i %s", szSteamID, szName, sReason.iTime, sReason.sReason.c_str());
 					g_pAdmin->SendAction(iSlot, "checkcheats_offline", szBuffer);
-					g_pAdmin->AddOfflinePlayerPunishment(szSteamID, sName, RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
+					if(sReason.iTime != -1) g_pAdmin->AddOfflinePlayerPunishment(szSteamID, szName, RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
 					g_pMenus->ClosePlayerMenu(iSlot);
 				}
 			}
 		});
-		g_pMenus->DisplayPlayerMenu(hMenu, g_bAdmin[iSlot]?iSlot:g_iTarget[iSlot]);
+		g_pMenus->DisplayPlayerMenu(hMenu, g_bAdmin[iSlot]?iSlot:iTarget);
 	}
-	int iTarget = g_iTarget[iSlot];
 	ResetUserData(iSlot);
 	ResetUserData(iTarget);
 }
