@@ -816,6 +816,7 @@ void FunCommands::AllPluginsLoaded()
 	}
 	g_pUtils->StartupServer(g_PLID, StartupServer);
 	g_pAdminApi->OnCoreLoaded(g_PLID, [](){
+		g_pAdminApi->RegisterCategory("players", g_pAdminApi->GetTranslation("Category_Players"), nullptr);
 		g_pAdminApi->RegisterItem("freeze", g_pAdminApi->GetTranslation("Item_Freeze"), "players", "@admin/freeze", nullptr, OnItemSelect);
 		g_pAdminApi->RegisterItem("gravity", g_pAdminApi->GetTranslation("Item_Gravity"), "players", "@admin/gravity", nullptr, OnItemSelect);
 		g_pAdminApi->RegisterItem("scale", g_pAdminApi->GetTranslation("Item_Scale"), "players", "@admin/scale", nullptr, OnItemSelect);
