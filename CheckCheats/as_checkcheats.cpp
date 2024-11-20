@@ -394,8 +394,8 @@ void ShowMainMenu(int iSlot)
 		if(g_pPlayers->IsFakeClient(i)) continue;
 		if(!g_pPlayers->IsConnected(i)) continue;
 		if(!g_pPlayers->IsInGame(i)) continue;
-		// if(g_pAdmin->HasPermission(i, g_szImmunityFlag)) continue;
-		// if(i == iSlot) continue;
+		if(g_pAdmin->HasPermission(i, g_szImmunityFlag)) continue;
+		if(i == iSlot) continue;
 		g_pMenus->AddItemMenu(hMenu, std::to_string(i).c_str(), g_pPlayers->GetPlayerName(i));
 		bFound = true;
 	}
@@ -540,9 +540,9 @@ void LoadConfig()
 		return true;
 	});
 
-	if(g_bAdminMenuType) g_pAdmin->RegisterCategory(g_szAdminMenuCategory, g_pAdmin->GetTranslation("Category_CheckCheats"), nullptr);
-	else g_pAdmin->RegisterCategory("players", g_pAdmin->GetTranslation("Category_Players"), nullptr);
-	g_pAdmin->RegisterItem("checkcheats", g_pAdmin->GetTranslation("Item_CheckCheats"), g_szAdminMenuCategory, g_szAdminMenuFlag, nullptr, [](int iSlot, const char* szCategory, const char* szIdentity, const char* szItem) {
+	if(g_bAdminMenuType) g_pAdmin->RegisterCategory(g_szAdminMenuCategory, "Category_CheckCheats", nullptr);
+	else g_pAdmin->RegisterCategory("players", "Category_Players", nullptr);
+	g_pAdmin->RegisterItem("checkcheats", "Item_CheckCheats", g_szAdminMenuCategory, g_szAdminMenuFlag, nullptr, [](int iSlot, const char* szCategory, const char* szIdentity, const char* szItem) {
 		ShowMainMenu(iSlot);
 	});
 

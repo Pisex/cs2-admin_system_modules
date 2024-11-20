@@ -581,15 +581,15 @@ void Players::AllPluginsLoaded()
 		return;
 	}
 	g_pAdminApi->OnCoreLoaded(g_PLID, [](){
-		g_pAdminApi->RegisterCategory("players", g_pAdminApi->GetTranslation("Category_Players"), nullptr);
-		g_pAdminApi->RegisterItem("who", g_pAdminApi->GetTranslation("Item_Who"), "players", "@admin/who", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("noclip", g_pAdminApi->GetTranslation("Item_Noclip"), "players", "@admin/noclip", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("switchteam", g_pAdminApi->GetTranslation("Item_SwitchTeam"), "players", "@admin/switchteam", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("changeteam", g_pAdminApi->GetTranslation("Item_ChangeTeam"), "players", "@admin/changeteam", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("rename", g_pAdminApi->GetTranslation("Item_Rename"), "players", "@admin/rename", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("slap", g_pAdminApi->GetTranslation("Item_Slap"), "players", "@admin/slap", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("kick", g_pAdminApi->GetTranslation("Item_Kick"), "players", "@admin/kick", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("kill", g_pAdminApi->GetTranslation("Item_Kill"), "players", "@admin/kill", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterCategory("players", "Category_Players", nullptr);
+		g_pAdminApi->RegisterItem("who", "Item_Who", "players", "@admin/who", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("noclip", "Item_Noclip", "players", "@admin/noclip", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("switchteam", "Item_SwitchTeam", "players", "@admin/switchteam", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("changeteam", "Item_ChangeTeam", "players", "@admin/changeteam", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("rename", "Item_Rename", "players", "@admin/rename", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("slap", "Item_Slap", "players", "@admin/slap", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("kick", "Item_Kick", "players", "@admin/kick", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("kill", "Item_Kill", "players", "@admin/kill", nullptr, OnItemSelect);
 	});
 
 	g_pUtils->StartupServer(g_PLID, StartupServer);

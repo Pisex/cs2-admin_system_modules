@@ -166,8 +166,8 @@ void Maps::AllPluginsLoaded()
 		return;
 	}
 	g_pAdminApi->OnCoreLoaded(g_PLID, [](){
-		g_pAdminApi->RegisterCategory("server", g_pAdminApi->GetTranslation("Category_Server"), nullptr);
-		g_pAdminApi->RegisterItem("maps", g_pAdminApi->GetTranslation("Item_Maps"), "server", "@admin/maps", nullptr, OnMapsSelect);
+		g_pAdminApi->RegisterCategory("server", "Category_Server", nullptr);
+		g_pAdminApi->RegisterItem("maps", "Item_Maps", "server", "@admin/maps", nullptr, OnMapsSelect);
 	});
 	
 	g_pUtils->StartupServer(g_PLID, StartupServer);

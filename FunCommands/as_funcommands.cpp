@@ -816,17 +816,17 @@ void FunCommands::AllPluginsLoaded()
 	}
 	g_pUtils->StartupServer(g_PLID, StartupServer);
 	g_pAdminApi->OnCoreLoaded(g_PLID, [](){
-		g_pAdminApi->RegisterCategory("players", g_pAdminApi->GetTranslation("Category_Players"), nullptr);
-		g_pAdminApi->RegisterItem("freeze", g_pAdminApi->GetTranslation("Item_Freeze"), "players", "@admin/freeze", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("gravity", g_pAdminApi->GetTranslation("Item_Gravity"), "players", "@admin/gravity", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("scale", g_pAdminApi->GetTranslation("Item_Scale"), "players", "@admin/scale", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("hp", g_pAdminApi->GetTranslation("Item_HP"), "players", "@admin/hp", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("armor", g_pAdminApi->GetTranslation("Item_Armor"), "players", "@admin/armor", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("speed", g_pAdminApi->GetTranslation("Item_Speed"), "players", "@admin/speed", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("god", g_pAdminApi->GetTranslation("Item_God"), "players", "@admin/god", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("bury", g_pAdminApi->GetTranslation("Item_Bury"), "players", "@admin/bury", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("unbury", g_pAdminApi->GetTranslation("Item_Unbury"), "players", "@admin/unbury", nullptr, OnItemSelect);
-		g_pAdminApi->RegisterItem("blind", g_pAdminApi->GetTranslation("Item_Blind"), "players", "@admin/blind", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterCategory("players", "Category_Players", nullptr);
+		g_pAdminApi->RegisterItem("freeze", "Item_Freeze", "players", "@admin/freeze", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("gravity", "Item_Gravity", "players", "@admin/gravity", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("scale", "Item_Scale", "players", "@admin/scale", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("hp", "Item_HP", "players", "@admin/hp", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("armor", "Item_Armor", "players", "@admin/armor", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("speed", "Item_Speed", "players", "@admin/speed", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("god", "Item_God", "players", "@admin/god", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("bury", "Item_Bury", "players", "@admin/bury", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("unbury", "Item_Unbury", "players", "@admin/unbury", nullptr, OnItemSelect);
+		g_pAdminApi->RegisterItem("blind", "Item_Blind", "players", "@admin/blind", nullptr, OnItemSelect);
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!freeze"}, [](int iSlot, const char* szContent){
