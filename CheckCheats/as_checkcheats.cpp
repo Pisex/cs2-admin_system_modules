@@ -541,7 +541,7 @@ void LoadConfig()
 	});
 
 	if(g_bAdminMenuType) g_pAdmin->RegisterCategory(g_szAdminMenuCategory, g_pAdmin->GetTranslation("Category_CheckCheats"), nullptr);
-	else g_pAdminApi->RegisterCategory("players", g_pAdminApi->GetTranslation("Category_Players"), nullptr);
+	else g_pAdmin->RegisterCategory("players", g_pAdmin->GetTranslation("Category_Players"), nullptr);
 	g_pAdmin->RegisterItem("checkcheats", g_pAdmin->GetTranslation("Item_CheckCheats"), g_szAdminMenuCategory, g_szAdminMenuFlag, nullptr, [](int iSlot, const char* szCategory, const char* szIdentity, const char* szItem) {
 		ShowMainMenu(iSlot);
 	});
