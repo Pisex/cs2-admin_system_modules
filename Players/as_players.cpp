@@ -30,6 +30,29 @@ CGameEntitySystem* GameEntitySystem()
 	return g_pUtils->GetCGameEntitySystem();
 }
 
+bool containsOnlyDigits(const std::string &str)
+{
+	return str.find_first_not_of("0123456789") == std::string::npos;
+}
+
+int FindUser(const char* szIdentity)
+{
+	int iSlot = -1;
+	for (int i = 0; i < 64; i++)
+	{
+		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
+		if(!pController) continue;
+		uint m_steamID = pController->m_steamID();
+		if(m_steamID == 0) continue;
+		if(strcasestr(engine->GetClientConVarValue(i, "name"), szIdentity) || (containsOnlyDigits(szIdentity) && m_steamID == std::stoll(szIdentity)) || (containsOnlyDigits(szIdentity) && std::stoll(szIdentity) == i))
+		{
+			iSlot = i;
+			break;
+		}
+	}
+	return iSlot;
+}
+
 void StartupServer()
 {
 	g_pGameEntitySystem = GameEntitySystem();
@@ -52,7 +75,8 @@ CON_COMMAND_F(mm_kill, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	CCSPlayerController* pPlayerController = CCSPlayerController::FromSlot(iTarget);
 	if(!pPlayerController) return;
 	CCSPlayerPawn* pPlayerPawn = pPlayerController->GetPlayerPawn();
@@ -84,7 +108,8 @@ CON_COMMAND_F(mm_kick, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	KickPlayer(iSlot, iTarget);
 }
 
@@ -103,7 +128,18 @@ CON_COMMAND_F(mm_slap, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	std::string arg2 = args.Arg(2);
+	if(!arg2.empty() && (arg2.length() > 3 || !std::all_of(arg2.begin(), arg2.end(), ::isdigit))) {
+		char szBuffer[256];
+		g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("UsageSlap"), args.Arg(0));
+		if(bConsole)
+			META_CONPRINTF("%s\n", szBuffer);
+		else
+			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
+		return;
+	}
 	int iDamage = std::atoi(args.Arg(2));
 	SlapPlayer(iSlot, iTarget, iDamage);
 }
@@ -123,7 +159,8 @@ CON_COMMAND_F(mm_rename, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args[1]);
+	int iTarget = FindUser(args[1]);
+	if(iTarget == -1) return;
 	std::string sName = args.ArgS() + 1;
 	std::string arg1 = args[1];
 	sName.erase(0, arg1.length());
@@ -157,7 +194,18 @@ CON_COMMAND_F(mm_changeteam, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	std::string arg2 = args.Arg(2);
+	if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+		char szBuffer[256];
+		g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("UsageSwitchTeam"), args.Arg(0));
+		if(bConsole)
+			META_CONPRINTF("%s\n", szBuffer);
+		else
+			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
+		return;
+	}
 	int iTeam = std::atoi(args.Arg(2));
 	ChangePlayerTeam(iSlot, iTarget, iTeam, false);
 }
@@ -177,7 +225,18 @@ CON_COMMAND_F(mm_switchteam, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	std::string arg2 = args.Arg(2);
+	if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+		char szBuffer[256];
+		g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("UsageSwitchTeam"), args.Arg(0));
+		if(bConsole)
+			META_CONPRINTF("%s\n", szBuffer);
+		else
+			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
+		return;
+	}
 	int iTeam = std::atoi(args.Arg(2));
 	ChangePlayerTeam(iSlot, iTarget, iTeam, true);
 }
@@ -197,7 +256,8 @@ CON_COMMAND_F(mm_noclip, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	NoclipPlayer(iSlot, iTarget);
 }
 
@@ -216,7 +276,8 @@ CON_COMMAND_F(mm_who, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	WhoPlayer(iSlot, iTarget, true);
 }
 
@@ -297,7 +358,6 @@ void NoclipPlayer(int iSlot, int iTarget)
 		g_pPlayersApi->SetMoveType(iTarget, MOVETYPE_WALK);
 	else
 		g_pPlayersApi->SetMoveType(iTarget, MOVETYPE_NOCLIP);
-	OnItemSelect(iSlot, "players", "noclip", "noclip");
 	g_pAdminApi->SendAction(iSlot, "noclip", std::to_string(iTarget).c_str());
 	if(g_pAdminApi->GetMessageType() == 2)
 	{
@@ -320,7 +380,13 @@ void WhoPlayer(int iSlot, int iTarget, bool bConsole)
 	std::vector<std::string> vFlags = g_pAdminApi->GetAdminFlags(iTarget);
 	if(vFlags.size() > 0)
 	{
-		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("Item_Who_Flags"), g_pPlayersApi->GetPlayerName(iTarget));
+		if(bConsole)
+		{
+			if(iSlot == -1) META_CONPRINTF("%s\n", g_pAdminApi->GetTranslation("Item_Who_Flags"), g_pPlayersApi->GetPlayerName(iTarget));
+			else g_pUtils->PrintToConsole(iSlot, "%s\n", g_pAdminApi->GetTranslation("Item_Who_Flags"), g_pPlayersApi->GetPlayerName(iTarget));
+		}
+		else
+			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Item_Who_Flags"), g_pPlayersApi->GetPlayerName(iTarget));
 		for(auto& flag : vFlags)
 		{
 			if(bConsole)
@@ -526,6 +592,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 			else if(!strcmp(szLastItem[iSlot], "noclip"))
 			{
 				NoclipPlayer(iSlot, iTarget);
+				OnItemSelect(iSlot, "players", "noclip", "noclip");
 			}
 			else if(!strcmp(szLastItem[iSlot], "who"))
 			{
@@ -602,7 +669,8 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		WhoPlayer(iSlot, iTarget, false);
 		return true;
 	});
@@ -615,7 +683,8 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		NoclipPlayer(iSlot, iTarget);
 		return true;
 	});
@@ -628,7 +697,13 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		std::string arg2 = args[2];
+		if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+			return true;
+		}
 		int iTeam = std::atoi(args[2]);
 		ChangePlayerTeam(iSlot, iTarget, iTeam, true);
 		return true;
@@ -642,7 +717,13 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		std::string arg2 = args[2];
+		if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+			return true;
+		}
 		int iTeam = std::atoi(args[2]);
 		ChangePlayerTeam(iSlot, iTarget, iTeam, false);
 		return true;
@@ -656,7 +737,8 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRename"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		std::string sName = args.ArgS() + 1;
 		std::string arg1 = args[1];
 		sName.erase(0, arg1.length());
@@ -675,7 +757,13 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		std::string arg2 = args[2];
+		if(!arg2.empty() && (arg2.length() > 3 || !std::all_of(arg2.begin(), arg2.end(), ::isdigit))) {
+			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
+			return true;
+		}
 		int iDamage = std::atoi(args[2]);
 		SlapPlayer(iSlot, iTarget, iDamage);
 		return true;
@@ -689,7 +777,8 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		KickPlayer(iSlot, iTarget);
 		return true;
 	});
@@ -702,7 +791,8 @@ void Players::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		KillPlayer(iSlot, iTarget);
 		return true;
 	});

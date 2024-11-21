@@ -29,6 +29,29 @@ void BlindPlayer(int iSlot, int iTarget, bool bBlind);
 void BuryPlayer(int iSlot, int iTarget);
 void UnburyPlayer(int iSlot, int iTarget);
 
+bool containsOnlyDigits(const std::string &str)
+{
+	return str.find_first_not_of("0123456789") == std::string::npos;
+}
+
+int FindUser(const char* szIdentity)
+{
+	int iSlot = -1;
+	for (int i = 0; i < 64; i++)
+	{
+		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
+		if(!pController) continue;
+		uint m_steamID = pController->m_steamID();
+		if(m_steamID == 0) continue;
+		if(strcasestr(engine->GetClientConVarValue(i, "name"), szIdentity) || (containsOnlyDigits(szIdentity) && m_steamID == std::stoll(szIdentity)) || (containsOnlyDigits(szIdentity) && std::stoll(szIdentity) == i))
+		{
+			iSlot = i;
+			break;
+		}
+	}
+	return iSlot;
+}
+
 CON_COMMAND_F(mm_gravity, "", FCVAR_NONE)
 {
 	int iSlot = context.GetPlayerSlot().Get();
@@ -44,7 +67,15 @@ CON_COMMAND_F(mm_gravity, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid gravity value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid gravity value\n");
+		return;
+	}
 	float fGravity = std::atof(args.Arg(2));
 	SetGravity(iSlot, iTarget, fGravity);
 }
@@ -64,7 +95,15 @@ CON_COMMAND_F(mm_hp, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid HP value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid HP value\n");
+		return;
+	}
 	int iHP = std::atoi(args.Arg(2));
 	SetHP(iSlot, iTarget, iHP);
 }
@@ -84,7 +123,15 @@ CON_COMMAND_F(mm_armor, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid armor value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid armor value\n");
+		return;
+	}
 	int iArmor = std::atoi(args.Arg(2));
 	SetArmor(iSlot, iTarget, iArmor);
 }
@@ -104,7 +151,15 @@ CON_COMMAND_F(mm_scale, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid scale value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid scale value\n");
+		return;
+	}
 	float fScale = std::atof(args.Arg(2));
 	SetScale(iSlot, iTarget, fScale);
 }
@@ -124,7 +179,15 @@ CON_COMMAND_F(mm_speed, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid speed value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid speed value\n");
+		return;
+	}
 	float fSpeed = std::atof(args.Arg(2));
 	SetSpeed(iSlot, iTarget, fSpeed);
 }
@@ -144,7 +207,15 @@ CON_COMMAND_F(mm_god, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid god value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid god value\n");
+		return;
+	}
 	bool bGod = args.ArgC() > 2 ? std::atoi(args.Arg(2)) : true;
 	SetGod(iSlot, iTarget, bGod);
 }
@@ -164,7 +235,15 @@ CON_COMMAND_F(mm_freezy, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid freeze value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid freeze value\n");
+		return;
+	}
 	float fTime = args.ArgC() > 2 ? std::atof(args.Arg(2)) : 0;
 	SetFreezy(iSlot, iTarget, true);
 	if(fTime > 0)
@@ -191,7 +270,8 @@ CON_COMMAND_F(mm_unfreezy, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	SetFreezy(iSlot, iTarget, false);
 }
 
@@ -210,7 +290,15 @@ CON_COMMAND_F(mm_blind, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
+	if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+		if(bConsole)
+			META_CONPRINTF("Invalid blind value\n");
+		else
+			g_pUtils->PrintToConsole(iSlot, "Invalid blind value\n");
+		return;
+	}
 	float fTime = args.ArgC() > 2 ? std::atof(args.Arg(2)) : 0;
 	BlindPlayer(iSlot, iTarget, true);
 	if(fTime > 0)
@@ -237,7 +325,8 @@ CON_COMMAND_F(mm_unblind, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	BlindPlayer(iSlot, iTarget, false);
 }
 
@@ -256,7 +345,8 @@ CON_COMMAND_F(mm_bury, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	BuryPlayer(iSlot, iTarget);
 }
 
@@ -275,7 +365,8 @@ CON_COMMAND_F(mm_unbury, "", FCVAR_NONE)
 			g_pUtils->PrintToConsole(iSlot, "%s\n", szBuffer);
 		return;
 	}
-	int iTarget = std::atoi(args.Arg(1));
+	int iTarget = FindUser(args.Arg(1));
+	if(iTarget == -1) return;
 	UnburyPlayer(iSlot, iTarget);
 }
 
@@ -766,7 +857,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 				OnItemSelect(iSlot, "players", "blind", "@admin/blind");
 			}
 		}
-		else
+		else if(iItem == 7)
 		{
 			g_pAdminApi->ShowAdminLastCategoryMenu(iSlot);
 		}
@@ -838,7 +929,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Freeze"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid freeze time value\n");
+			return true;
+		}
 		float fTime = args.ArgC() > 2?std::atof(args[2]):0;
 		SetFreezy(iSlot, iTarget, true);
 		if(fTime > 0)
@@ -860,7 +956,8 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unfreeze"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		SetFreezy(iSlot, iTarget, false);
 		return true;
 	});
@@ -874,7 +971,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Gravity"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid gravity value\n");
+			return true;
+		}
 		float fGravity = std::atof(args[2]);
 		SetGravity(iSlot, iTarget, fGravity);
 		return true;
@@ -889,7 +991,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Scale"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid scale value\n");
+			return true;
+		}
 		float fScale = std::atof(args[2]);
 		SetScale(iSlot, iTarget, fScale);
 		return true;
@@ -904,7 +1011,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_HP"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid hp value\n");
+			return true;
+		}
 		int iHP = std::atoi(args[2]);
 		SetHP(iSlot, iTarget, iHP);
 		return true;
@@ -919,7 +1031,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Armor"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid armor value\n");
+			return true;
+		}
 		int iArmor = std::atoi(args[2]);
 		SetArmor(iSlot, iTarget, iArmor);
 		return true;
@@ -934,7 +1051,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Speed"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid speed value\n");
+			return true;
+		}
 		float fSpeed = std::atof(args[2]);
 		SetSpeed(iSlot, iTarget, fSpeed);
 		return true;
@@ -949,7 +1071,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_God"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (strlen(args[2]) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid god value\n");
+			return true;
+		}
 		bool bGod = std::atoi(args[2]);
 		SetGod(iSlot, iTarget, bGod);
 		return true;
@@ -964,7 +1091,8 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Bury"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		BuryPlayer(iSlot, iTarget);
 		return true;
 	});
@@ -978,7 +1106,8 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unbury"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		UnburyPlayer(iSlot, iTarget);
 		return true;
 	});
@@ -992,7 +1121,12 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Blind"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
+		if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+			g_pUtils->PrintToConsole(iSlot, "Invalid blind time value\n");
+			return true;
+		}
 		float fTime = args.ArgC() > 2?std::atof(args[2]):0;
 		BlindPlayer(iSlot, iTarget, true);
 		if(fTime > 0)
@@ -1014,7 +1148,8 @@ void FunCommands::AllPluginsLoaded()
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unblind"), args[0]);
 			return true;
 		}
-		int iTarget = std::atoi(args[1]);
+		int iTarget = FindUser(args[1]);
+		if(iTarget == -1) return true;
 		BlindPlayer(iSlot, iTarget, false);
 		return true;
 	});
