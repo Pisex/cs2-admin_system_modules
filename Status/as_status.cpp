@@ -24,9 +24,9 @@ void Get_Status(int iSlot, bool bConsole)
 	{
 		if(g_pPlayersApi->IsFakeClient(i)) continue;
 		if(bConsole)
-			g_pUtils->PrintToConsole(iSlot, "%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), pPlayer->m_steamID());
+			g_pUtils->PrintToConsole(iSlot, "%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), g_pPlayersApi->GetSteamID64(i));
 		else
-			g_pUtils->PrintToChat(iSlot, "%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), pPlayer->m_steamID());
+			g_pUtils->PrintToChat(iSlot, "%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), g_pPlayersApi->GetSteamID64(i));
 	}
 }
 
@@ -41,7 +41,7 @@ CON_COMMAND_F(mm_status, "", FCVAR_GAMEDLL)
 		for (int i = 0; i < 64; i++)
 		{
 			if(g_pPlayersApi->IsFakeClient(i)) continue;
-			META_CONPRINTF("%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), pPlayer->m_steamID());
+			META_CONPRINTF("%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), g_pPlayersApi->GetSteamID64(i));
 		}
 	}
 	else Get_Status(iSlot, true);
