@@ -96,7 +96,7 @@ void SetStage(int iSlot, int iStage)
 	if(iStage == 1)
 	{
 		if(g_iTarget[iSlot] != -1) g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
-		else g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
+		g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Input_Contact"), g_szContactCommand, g_mSocials[g_szSocial[iSlot]].sExample.c_str());
 	}
 }
 
@@ -279,7 +279,6 @@ void CheckMenu(int iSlot)
 		g_pMenus->AddItemMenu(hMenu, "5", g_pAdmin->GetTranslation("CC_BlockChangeTeam_Item"));
 	}
 	g_pMenus->AddItemMenu(hMenu, "4", g_pAdmin->GetTranslation("CC_EndCheck_Item"));
-	g_pMenus->SetBackMenu(hMenu, true);
 	g_pMenus->SetExitMenu(hMenu, true);
 	g_pMenus->SetCallback(hMenu, [](const char* szBack, const char* szFront, int iItem, int iSlot) {
 		if(iItem < 7)
@@ -317,16 +316,13 @@ void CheckMenu(int iSlot)
 			}
 			
 		}
-		else if(iItem == 7)
-		{
-			g_pAdmin->ShowAdminLastCategoryMenu(iSlot);
-		}
 	});
 	g_pMenus->DisplayPlayerMenu(hMenu, iSlot);
 }
 
 void StartCheck(int iSlot, int iTarget)
 {
+	// g_pUtils->PrintToChatAll(g_pAdmin->GetTranslation("CC_Notify_All_Start"), g_pPlayers->GetPlayerName(iSlot), g_pPlayers->GetPlayerName(iTarget));
 	if(g_szSound[0]) engine->ClientCommand(iTarget, "play %s", g_szSound);
 	if(g_szOverlay[0])
 	{
@@ -528,6 +524,8 @@ void LoadConfig()
 			std::string sContact = arg.ArgS();
 			if(sContact.size())
 				sContact.pop_back();
+			//Clear space at the beginning of the string if it exists
+			if(sContact[0] == ' ') while(sContact[0] == ' ') sContact.erase(0, 1);
 			if(sContact.size() < g_mSocials[g_szSocial[iSlot]].iMin || sContact.size() > g_mSocials[g_szSocial[iSlot]].iMax)
 			{
 				g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Contact_Size"), g_mSocials[g_szSocial[iSlot]].iMin, g_mSocials[g_szSocial[iSlot]].iMax);
@@ -659,9 +657,9 @@ void CheckCheats::AllPluginsLoaded()
 	}
 	g_pUtils->HookEvent(g_PLID, "player_disconnect", OnPlayerDisconnect);
 	g_pUtils->RegCommand(g_PLID, { "jointeam" }, {}, [](int iSlot, const char* szContent) {
-		if(g_iTarget[iSlot] != -1 && (g_bBlockTeamChange[iSlot] || g_bAutoMove))
+		if(g_iTarget[iSlot] != -1 && (g_bBlockTeamChange[g_iTarget[iSlot]] || g_bAutoMove && g_bAdmin[g_iTarget[iSlot]]))
 		{
-			g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_BlockChangeTeam"));
+			g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_BlockChangeTeam"));
 			return true;
 		}
 		return false;
@@ -710,7 +708,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* CheckCheats::GetDate()

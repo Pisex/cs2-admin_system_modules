@@ -64,7 +64,7 @@ jobs:
 
       - name: Build plugins
         run: |
-          PLUGIN_DIRS=("Admins" "Chat" "CheckCheats" "FunCommands" "Hide" "Maps" "Players" "Rcon" "Status" "VoteBKM" "VIP")
+          PLUGIN_DIRS=("Admins" "AdminTime" "BlockDB" "Chat" "CheckCheats" "FunCommands" "Hide" "Maps" "Players" "Rcon" "Status" "VoteBKM" "VIP")
           for PLUGIN in "${PLUGIN_DIRS[@]}"; do
             cd $PLUGIN
             mkdir -p build
@@ -83,6 +83,8 @@ jobs:
           name: compile
           path: |
             ${{ github.workspace }}/Admins.zip
+            ${{ github.workspace }}/AdminTime.zip
+            ${{ github.workspace }}/BlockDB.zip
             ${{ github.workspace }}/Chat.zip
             ${{ github.workspace }}/CheckCheats.zip
             ${{ github.workspace }}/FunCommands.zip
