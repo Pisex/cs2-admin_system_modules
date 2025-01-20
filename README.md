@@ -60,3 +60,11 @@ mm_status/!status - @admin/status
 ```
 Commands in config - @admin/votebkm
 ```
+- LR Admin
+```
+@admin/lr
+```
+- VIP Permissions
+```
+groups.ini -> "admin_permissions"    "@admin/status;@admin/votebkm"
+```
