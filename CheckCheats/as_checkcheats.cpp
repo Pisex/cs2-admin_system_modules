@@ -26,6 +26,8 @@ Leave g_Leave;
 const char* g_szSound;
 bool g_bAutoMove;
 
+int g_iStart[64];
+
 int g_iImmunityType;
 const char* g_szImmunityFlag;
 
@@ -36,6 +38,9 @@ const char* g_szAdminMenuFlag;
 const char* g_szContactCommand;
 
 const char* g_szOverlay;
+
+bool g_bDB;
+int g_iServerID;
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 ///////////////////////////////////////////
@@ -125,6 +130,7 @@ void ResetUserData(int iSlot)
 void SetContact(int iSlot, const char* szContact)
 {
 	g_szContact[iSlot] = szContact;
+	if(g_iTarget[iSlot] != -1) g_szContact[g_iTarget[iSlot]] = szContact;
 	SetStage(iSlot, 2);
 }
 
@@ -236,16 +242,32 @@ void EndCheckMenu(int iSlot)
 				Reasons sReason = g_mReasons[iReason];
 				if((sReason.iMin <= g_iStage[iSlot] || sReason.iMin == -1) && (sReason.iMax > g_iStage[iSlot] || sReason.iMax == -1))
 				{
+					if(g_bDB) {
+						char szBuffer[1024];
+						g_SMAPI->Format(szBuffer, sizeof(szBuffer), "INSERT INTO `checkcheats_stats` (\
+							`server_id`, `player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `datestart`, `date_end`, `verdict`, `suspect_discord`) VALUES (\
+							'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
+							g_iServerID, 
+							g_pPlayers->GetSteamID64(iTarget),
+							g_pPlayers->GetPlayerName(iTarget),
+							g_pPlayers->GetSteamID64(iSlot),
+							g_pPlayers->GetPlayerName(iSlot),
+							g_iStart[iSlot],
+							std::time(nullptr),
+							sReason.sReason2.c_str(),
+							g_szContact[iSlot]);
+						g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
+					}
 					char szBuffer[128];
-					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%i %i %s", iSlot, sReason.iTime, sReason.sReason2.c_str());
+					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%i %i %s", iTarget, sReason.iTime, sReason.sReason2.c_str());
 					g_pAdmin->SendAction(iSlot, "checkcheats", szBuffer);
 					if(sReason.iTime == -1)
 					{
 						g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_End_Good_Admin"));
-						g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_End_Good"));
+						g_pUtils->PrintToChat(iTarget, g_pAdmin->GetTranslation("CC_End_Good"));
 					}
-					else g_pAdmin->AddPlayerPunishment(g_iTarget[iSlot], RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
-					ResetUserData(g_iTarget[iSlot]);
+					else g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
+					ResetUserData(iTarget);
 					ResetUserData(iSlot);
 					g_pMenus->ClosePlayerMenu(iSlot);
 				}
@@ -322,7 +344,10 @@ void CheckMenu(int iSlot)
 
 void StartCheck(int iSlot, int iTarget)
 {
+	g_iStart[iSlot] = std::time(0);
+	g_iStart[iTarget] = std::time(0);
 	// g_pUtils->PrintToChatAll(g_pAdmin->GetTranslation("CC_Notify_All_Start"), g_pPlayers->GetPlayerName(iSlot), g_pPlayers->GetPlayerName(iTarget));
+	// g_pUtils->PrintToChat(iTarget, g_pAdmin->GetTranslation("CC_Start_Warn"));
 	if(g_szSound[0]) engine->ClientCommand(iTarget, "play %s", g_szSound);
 	if(g_szOverlay[0])
 	{
@@ -501,6 +526,8 @@ void LoadConfig()
 	g_szOverlay = hKv->GetString("overlay", "");
 	g_szSound = hKv->GetString("sound", "");
 	g_bAutoMove = hKv->GetBool("auto_move");
+	g_bDB = hKv->GetBool("db_use", false);
+	g_iServerID = hKv->GetInt("server_id", 0);
 	const char* szCommands = hKv->GetString("commands");
 	std::vector<std::string> vecCommands = split(std::string(szCommands), "|");
 	g_pUtils->RegCommand(g_PLID, {}, vecCommands, [](int iSlot, const char* szContent) {
@@ -531,7 +558,7 @@ void LoadConfig()
 				g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_Contact_Size"), g_mSocials[g_szSocial[iSlot]].iMin, g_mSocials[g_szSocial[iSlot]].iMax);
 				return true;
 			}
-			SetContact(iSlot, sContact.c_str());
+			SetContact(iSlot, strdup(sContact.c_str()));
 			g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_SetContact_User"), sContact.c_str());
 			g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_SetContact_Admin"), sContact.c_str());
 		}
@@ -592,7 +619,7 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 		}
 		g_pMenus->SetBackMenu(hMenu, false);
 		g_pMenus->SetExitMenu(hMenu, true);
-		g_pMenus->SetCallback(hMenu, [iSteamID, szName = strdup(sName)](const char* szBack, const char* szFront, int iItem, int iSlot) {
+		g_pMenus->SetCallback(hMenu, [iSteamID, szName = strdup(sName), szContact = strdup(g_szContact[iSlot])](const char* szBack, const char* szFront, int iItem, int iSlot) {
 			if(iItem < 7)
 			{
 				int iReason = std::atoi(szBack);
@@ -604,6 +631,26 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 					char szBuffer[128];
 					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%s %s %i %s", szSteamID, szName, sReason.iTime, sReason.sReason.c_str());
 					g_pAdmin->SendAction(iSlot, "checkcheats_offline", szBuffer);
+
+					
+					if(g_bDB) {
+						char szBuffer[1024];
+						g_SMAPI->Format(szBuffer, sizeof(szBuffer), "INSERT INTO `checkcheats_stats` (\
+							`server_id`, `player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `datestart`, `date_end`, `verdict`, `suspect_discord`) VALUES (\
+							'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
+							g_iServerID,
+							iSteamID, 
+							szName,
+							g_pPlayers->GetSteamID64(iSlot),
+							g_pPlayers->GetPlayerName(iSlot),
+							g_iStart[iSlot],
+							std::time(0),
+							sReason.sReason.c_str(),
+							szContact);
+
+						g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
+					}
+
 					if(sReason.iTime != -1) g_pAdmin->AddOfflinePlayerPunishment(szSteamID, szName, RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
 					g_pMenus->ClosePlayerMenu(iSlot);
 				}
@@ -613,6 +660,24 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 	}
 	ResetUserData(iSlot);
 	ResetUserData(iTarget);
+}
+
+void OnAdminCoreLoaded()
+{
+	if(g_bDB) {
+		g_pAdmin->GetMySQLConnection()->Query("CREATE TABLE IF NOT EXISTS `checkcheats_stats` (\
+			`id` INT PRIMARY KEY AUTO_INCREMENT,\
+			`server_id` INT DEFAULT NULL,\
+			`player_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`player_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`admin_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`admin_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`datestart` INT UNSIGNED NULL DEFAULT NULL,\
+			`date_end` INT UNSIGNED NULL DEFAULT NULL,\
+			`verdict` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`suspect_discord` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL\
+			) ENGINE = InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;", [](ISQLQuery*){});
+	}
 }
 
 void CheckCheats::AllPluginsLoaded()
@@ -664,6 +729,7 @@ void CheckCheats::AllPluginsLoaded()
 		}
 		return false;
 	});
+	g_pAdmin->OnCoreLoaded(g_PLID, OnAdminCoreLoaded);
 	g_pUtils->StartupServer(g_PLID, StartupServer);
 	LoadConfig();
 	g_pUtils->CreateTimer(1.0f, [](){
@@ -708,7 +774,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.1";
+	return "1.0.2";
 }
 
 const char* CheckCheats::GetDate()

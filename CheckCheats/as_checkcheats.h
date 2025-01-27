@@ -17,6 +17,7 @@
 #include "CParticleSystem.h"
 #include "include/menus.h"
 #include "include/admin.h"
+#include "include/mysql_mm.h"
 
 struct Reasons
 {

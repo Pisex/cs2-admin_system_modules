@@ -1,7 +1,7 @@
 #Permissions
 - Admins
 ```
-mm_admins/!admins - @admin/hide
+mm_admins/!admins - @admin/admins
 ```
 - Chat(Admin chat)
 ```
