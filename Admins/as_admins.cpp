@@ -41,6 +41,7 @@ void Get_Admins(int iSlot, bool bConsole)
 			if(!g_pAdminApi->IsAdmin(i)) continue;
 			g_pMenus->AddItemMenu(hMenu, "", g_pPlayersApi->GetPlayerName(i), ITEM_DISABLED);
 		}
+		g_pMenus->SetExitMenu(hMenu, true);
 		g_pMenus->SetCallback(hMenu, [](const char* szBack, const char* szFront, int iItem, int iSlot) {
 
 			return true;
@@ -146,7 +147,7 @@ const char* Admins::GetLicense()
 
 const char* Admins::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* Admins::GetDate()
