@@ -89,6 +89,7 @@ void Hide::AllPluginsLoaded()
 	g_pUtils->RegCommand(g_PLID, {"jointeam"}, {}, [](int iSlot, const char* szContent) {
 		if(g_bHide[iSlot])
 		{
+			g_pAdminApi->SendAction(iSlot, "hide_off", "");
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Hide_Off"));
 			g_bHide[iSlot] = false;
 		}
@@ -99,6 +100,7 @@ void Hide::AllPluginsLoaded()
 		{
 			if(g_bHide[iSlot])
 			{
+				g_pAdminApi->SendAction(iSlot, "hide_off", "");
 				g_bHide[iSlot] = false;
 				g_pPlayersApi->ChangeTeam(iSlot, 1);
 				g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Hide_Off"));
@@ -112,6 +114,7 @@ void Hide::AllPluginsLoaded()
 					if(!pPlayer) return -1.0f;
 					CCSPlayerPawn* pPawn = pPlayer->GetPlayerPawn();
 					if(!pPawn) return -1.0f;
+					g_pAdminApi->SendAction(iSlot, "hide_on", "");
 					if(pPawn->IsAlive()) g_pPlayersApi->CommitSuicide(iSlot, false, true);
 					g_pPlayersApi->ChangeTeam(iSlot, 1);
 					g_pPlayersApi->ChangeTeam(iSlot, 0);
@@ -136,7 +139,7 @@ const char* Hide::GetLicense()
 
 const char* Hide::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* Hide::GetDate()

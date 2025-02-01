@@ -125,6 +125,7 @@ void ResetUserData(int iSlot)
 	g_bBlockTeamChange[iSlot] = false;
 	g_bAdmin[iSlot] = false;
 	SetStage(iSlot, -1);
+	g_pMenus->ClosePlayerMenu(iSlot);
 }
 
 void SetContact(int iSlot, const char* szContact)
@@ -269,7 +270,6 @@ void EndCheckMenu(int iSlot)
 					else g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, sReason.iTime, sReason.sReason2.c_str(), iSlot);
 					ResetUserData(iTarget);
 					ResetUserData(iSlot);
-					g_pMenus->ClosePlayerMenu(iSlot);
 				}
 			}
 		}
@@ -431,7 +431,6 @@ void ShowMainMenu(int iSlot)
 		if(iItem < 7)
 		{
 			int iTarget = std::atoi(szBack);
-			g_pMenus->ClosePlayerMenu(iSlot);
 			ResetUserData(iSlot);
 			ResetUserData(iTarget);
 			g_bAdmin[iSlot] = true;
@@ -631,7 +630,6 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 					char szBuffer[128];
 					g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%s %s %i %s", szSteamID, szName, sReason.iTime, sReason.sReason.c_str());
 					g_pAdmin->SendAction(iSlot, "checkcheats_offline", szBuffer);
-
 					
 					if(g_bDB) {
 						char szBuffer[1024];
@@ -668,15 +666,15 @@ void OnAdminCoreLoaded()
 		g_pAdmin->GetMySQLConnection()->Query("CREATE TABLE IF NOT EXISTS `checkcheats_stats` (\
 			`id` INT PRIMARY KEY AUTO_INCREMENT,\
 			`server_id` INT DEFAULT NULL,\
-			`player_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
-			`player_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
-			`admin_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
-			`admin_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
+			`player_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,\
+			`player_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,\
+			`admin_steamid` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,\
+			`admin_name` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,\
 			`datestart` INT UNSIGNED NULL DEFAULT NULL,\
 			`date_end` INT UNSIGNED NULL DEFAULT NULL,\
-			`verdict` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL,\
-			`suspect_discord` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci NULL DEFAULT NULL\
-			) ENGINE = InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;", [](ISQLQuery*){});
+			`verdict` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL,\
+			`suspect_discord` VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL\
+			) ENGINE = InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;", [](ISQLQuery*){});
 	}
 }
 
@@ -774,7 +772,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.2";
+	return "1.0.3";
 }
 
 const char* CheckCheats::GetDate()

@@ -15,6 +15,20 @@ IMenusApi* g_pMenus;
 IPlayersApi* g_pPlayersApi;
 IAdminApi* g_pAdminApi;
 
+bool g_bHide[64];
+
+void OnAdminAction(int iSlot, const char* szAction, const char* szParam)
+{
+	if(!strcmp(szAction, "hide_on"))
+	{
+		g_bHide[iSlot] = true;
+	}
+	else if(!strcmp(szAction, "hide_off"))
+	{
+		g_bHide[iSlot] = false;
+	}
+}
+
 void Get_Admins(int iSlot, bool bConsole)
 {
 	if(bConsole)
@@ -26,6 +40,7 @@ void Get_Admins(int iSlot, bool bConsole)
 			CCSPlayerController* pPlayer = CCSPlayerController::FromSlot(i);
 			if(!pPlayer) continue;
 			if(!g_pAdminApi->IsAdmin(i)) continue;
+			if(g_bHide[i]) continue;
 			if(iSlot == -1) META_CONPRINTF("%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), pPlayer->m_steamID());
 			else g_pUtils->PrintToConsole(iSlot, "%i. %s - %lld\n", i, g_pPlayersApi->GetPlayerName(i), pPlayer->m_steamID());
 		}
@@ -34,19 +49,19 @@ void Get_Admins(int iSlot, bool bConsole)
 	{
 		Menu hMenu;
 		g_pMenus->SetTitleMenu(hMenu, g_pAdminApi->GetTranslation("Admins_Title"));
+		bool bShow = false;
 		for (int i = 0; i < 64; i++)
 		{
 			CCSPlayerController* pPlayer = CCSPlayerController::FromSlot(i);
 			if(!pPlayer) continue;
 			if(!g_pAdminApi->IsAdmin(i)) continue;
+			if(g_bHide[i]) continue;
+			bShow = true;
 			g_pMenus->AddItemMenu(hMenu, "", g_pPlayersApi->GetPlayerName(i), ITEM_DISABLED);
 		}
 		g_pMenus->SetExitMenu(hMenu, true);
-		g_pMenus->SetCallback(hMenu, [](const char* szBack, const char* szFront, int iItem, int iSlot) {
-
-			return true;
-		});
-		g_pMenus->DisplayPlayerMenu(hMenu, iSlot);
+		if(!bShow) g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Admins_NoAdmins"));
+		else g_pMenus->DisplayPlayerMenu(hMenu, iSlot);
 	}
 }
 
@@ -132,6 +147,7 @@ void Admins::AllPluginsLoaded()
 		engine->ServerCommand(sBuffer.c_str());
 		return;
 	}
+	g_pAdminApi->OnAction(g_PLID, OnAdminAction);
 	g_pUtils->StartupServer(g_PLID, StartupServer);
 	g_pUtils->RegCommand(g_PLID, {}, {"!admins"}, [](int iSlot, const char* szContent) {
 		if(g_pAdminApi->HasPermission(iSlot, "@admin/admins")) Get_Admins(iSlot, false);
@@ -147,7 +163,7 @@ const char* Admins::GetLicense()
 
 const char* Admins::GetVersion()
 {
-	return "1.0.1";
+	return "1.0.2";
 }
 
 const char* Admins::GetDate()
