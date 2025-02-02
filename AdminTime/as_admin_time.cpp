@@ -17,6 +17,7 @@ IAdminApi* g_pAdminApi;
 IMySQLConnection* g_pConnection;
 
 int g_iServerID;
+bool g_bReset;
 
 CGameEntitySystem* GameEntitySystem()
 {
@@ -41,6 +42,7 @@ void LoadConfig()
 		return;
 	}
 	g_iServerID = hKv->GetInt("server_id");
+	g_bReset = hKv->GetBool("reset", true);
 }
 
 bool ATime::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
@@ -80,6 +82,11 @@ void OnAdminCoreLoaded()
 			`played_time` INT NOT NULL DEFAULT 0,\
 			`server_id` VARCHAR(32) NOT NULL\
 		);",[](ISQLQuery *){});
+
+		
+		char szQuery[256];
+		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), g_iServerID);
+		g_pConnection->Query(szQuery,[](ISQLQuery *){});
 	}
 }
 
@@ -87,9 +94,11 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 	int iSlot = pEvent->GetInt("userid");
 	uint64 iSteamID64 = g_pPlayersApi->GetSteamID64(iSlot);
 	
-	char szQuery[256];
-	g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `admin_id` = '%llu' AND `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), iSteamID64, g_iServerID);
-	g_pConnection->Query(szQuery,[](ISQLQuery *){});
+	if(g_bReset) {
+		char szQuery[256];
+		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `admin_id` = '%llu' AND `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), iSteamID64, g_iServerID);
+		g_pConnection->Query(szQuery,[](ISQLQuery *){});
+	}
 }
 
 void OnAdminConnect(int iSlot) {
@@ -145,7 +154,7 @@ const char* ATime::GetLicense()
 
 const char* ATime::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* ATime::GetDate()
