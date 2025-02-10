@@ -722,7 +722,7 @@ void CheckCheats::AllPluginsLoaded()
 	g_pUtils->RegCommand(g_PLID, { "jointeam" }, {}, [](int iSlot, const char* szContent) {
 		if(g_iTarget[iSlot] != -1 && (g_bBlockTeamChange[g_iTarget[iSlot]] || g_bAutoMove && g_bAdmin[g_iTarget[iSlot]]))
 		{
-			g_pUtils->PrintToChat(g_iTarget[iSlot], g_pAdmin->GetTranslation("CC_BlockChangeTeam"));
+			g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_BlockChangeTeam"));
 			return true;
 		}
 		return false;
@@ -772,7 +772,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.3";
+	return "1.0.4";
 }
 
 const char* CheckCheats::GetDate()

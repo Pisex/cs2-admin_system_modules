@@ -664,7 +664,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/who")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
+		if(args.ArgC() < 3)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
@@ -678,7 +678,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/noclip")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
+		if(args.ArgC() < 3)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
@@ -692,7 +692,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/switchteam")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
+		if(args.ArgC() < 4)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
 			return true;
@@ -712,7 +712,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/changeteam")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
+		if(args.ArgC() < 4)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
 			return true;
@@ -732,7 +732,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/rename")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
+		if(args.ArgC() < 4)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRename"), args[0]);
 			return true;
@@ -772,7 +772,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/kick")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
+		if(args.ArgC() < 3)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
@@ -786,7 +786,7 @@ void Players::AllPluginsLoaded()
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/kill")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
+		if(args.ArgC() < 3)
 		{
 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
 			return true;
@@ -806,7 +806,7 @@ const char* Players::GetLicense()
 
 const char* Players::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* Players::GetDate()

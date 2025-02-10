@@ -404,7 +404,7 @@ void SetGravity(int iSlot, int iTarget, float fGravity)
 	CCSPlayerPawn* pPlayerPawn = pPlayerController->GetPlayerPawn();
 	if(!pPlayerPawn) return;
 	pPlayerPawn->m_flGravityScale() = fGravity;
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("AdminGravityMessage"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget), fGravity);
 	else if(g_pAdminApi->GetMessageType() == 1)
@@ -422,7 +422,7 @@ void SetHP(int iSlot, int iTarget, int iHP)
 	if(!pPlayerPawn) return;
 	pPlayerPawn->m_iHealth() = iHP;
 	g_pUtils->SetStateChanged(pPlayerPawn, "CBaseEntity", "m_iHealth");
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("AdminHPMessage"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget), iHP);
 	else if(g_pAdminApi->GetMessageType() == 1)
@@ -440,7 +440,7 @@ void SetArmor(int iSlot, int iTarget, int iArmor)
 	if(!pPlayerPawn) return;
 	pPlayerPawn->m_ArmorValue() = iArmor;
 	g_pUtils->SetStateChanged(pPlayerPawn, "CCSPlayerPawn", "m_ArmorValue");
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("AdminArmorMessage"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget), iArmor);
 	else if(g_pAdminApi->GetMessageType() == 1)
@@ -458,7 +458,7 @@ void SetScale(int iSlot, int iTarget, float fScale)
 	if(!pPlayerPawn) return;
 	pPlayerPawn->m_CBodyComponent()->m_pSceneNode()->m_flScale() = fScale;
 	g_pUtils->SetStateChanged(pPlayerPawn, "CBaseEntity", "m_CBodyComponent");
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("AdminScaleMessage"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget), fScale);
 	else if(g_pAdminApi->GetMessageType() == 1)
@@ -481,7 +481,7 @@ void SetSpeed(int iSlot, int iTarget, float fSpeed)
 	else if(g_pAdminApi->GetMessageType() == 1)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("SpeedMessage"), g_pPlayersApi->GetPlayerName(iTarget), fSpeed);
 	
-	char szBuffer[128];
+	char szBuffer[256];
 	g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%i %f", iTarget, fSpeed);
 	g_pAdminApi->SendAction(iSlot, "speed", szBuffer);
 }
@@ -493,21 +493,21 @@ void SetGod(int iSlot, int iTarget, bool bGod)
 	CCSPlayerPawn* pPlayerPawn = pPlayerController->GetPlayerPawn();
 	if(!pPlayerPawn) return;
 	pPlayerPawn->m_bTakesDamage() = bGod;
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 	{
 		if(bGod)
-			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("AdminGodMessageEnable"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget));
-		else
 			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("AdminGodMessageDisable"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget));
+		else
+			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("AdminGodMessageEnable"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget));
 		g_pUtils->PrintToChatAll(szBuffer);
 	}
 	else if(g_pAdminApi->GetMessageType() == 1)
 	{
 		if(bGod)
-			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("GodMessageEnable"), g_pPlayersApi->GetPlayerName(iTarget));
-		else
 			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("GodMessageDisable"), g_pPlayersApi->GetPlayerName(iTarget));
+		else
+			g_SMAPI->Format(szBuffer, sizeof(szBuffer), g_pAdminApi->GetTranslation("GodMessageEnable"), g_pPlayersApi->GetPlayerName(iTarget));
 		g_pUtils->PrintToChatAll(szBuffer);
 	}
 	
@@ -519,7 +519,7 @@ void SetFreezy(int iSlot, int iTarget, bool bFreeze)
 {
 	if(bFreeze) g_pPlayersApi->SetMoveType(iTarget, MOVETYPE_OBSOLETE);
 	else g_pPlayersApi->SetMoveType(iTarget, MOVETYPE_WALK);
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 	{
 		if(bFreeze)
@@ -546,7 +546,7 @@ void BlindPlayer(int iSlot, int iTarget, bool bBlind)
 	if(!pPlayerController) return;
 	CCSPlayerPawn* pPlayerPawn = pPlayerController->GetPlayerPawn();
 	if(!pPlayerPawn) return;
-	char szBuffer[128];
+	char szBuffer[256];
 	if(bBlind)
 	{
 		pPlayerPawn->m_flFlashDuration() = 9999;
@@ -583,7 +583,7 @@ void BuryPlayer(int iSlot, int iTarget)
 	QAngle pAngles = pPlayerPawn->GetAbsRotation();
 	Vector vVelocity = pPlayerPawn->GetAbsVelocity();
 	g_pUtils->TeleportEntity(pPlayerPawn, &vOrigin, &pAngles, &vVelocity);
-	char szBuffer[128];
+	char szBuffer[256];
 	if(g_pAdminApi->GetMessageType() == 2)
 		g_pUtils->PrintToChatAll(g_pAdminApi->GetTranslation("AdminBuryMessage"), iSlot == -1?"Console":g_pPlayersApi->GetPlayerName(iSlot), g_pPlayersApi->GetPlayerName(iTarget));
 	else if(g_pAdminApi->GetMessageType() == 1)
@@ -744,7 +744,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 	g_szLastItem[iSlot] = strdup(szIdentity);
 	Menu hMenu;
 	g_pMenus->SetTitleMenu(hMenu, g_pAdminApi->GetTranslation("SelectPlayer"));
-	char szBuffer[128];
+	char szBuffer[256];
 	for (int i = 0; i < 64; i++)
 	{
 		CCSPlayerController* pPlayerController = CCSPlayerController::FromSlot(i);
@@ -1163,7 +1163,7 @@ const char* FunCommands::GetLicense()
 
 const char* FunCommands::GetVersion()
 {
-	return "1.0";
+	return "1.1";
 }
 
 const char* FunCommands::GetDate()
