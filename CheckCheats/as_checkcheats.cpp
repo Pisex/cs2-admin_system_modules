@@ -399,7 +399,7 @@ void StartCheck(int iSlot, int iTarget)
 	if(iSlot != iTarget) CheckMenu(iSlot);
 }
 
-void ShowMainMenu(int iSlot)
+void ShowMainMenu(int iSlot, bool bCommand = false)
 {
 	if(g_iTarget[iSlot] != -1)
 	{
@@ -425,9 +425,9 @@ void ShowMainMenu(int iSlot)
 		g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("CC_NoPlayers"));
 		return;
 	}
-	g_pMenus->SetBackMenu(hMenu, true);
+	if(!bCommand) g_pMenus->SetBackMenu(hMenu, true);
 	g_pMenus->SetExitMenu(hMenu, true);
-	g_pMenus->SetCallback(hMenu, [](const char* szBack, const char* szFront, int iItem, int iSlot) {
+	g_pMenus->SetCallback(hMenu, [bCommand](const char* szBack, const char* szFront, int iItem, int iSlot) {
 		if(iItem < 7)
 		{
 			int iTarget = std::atoi(szBack);
@@ -437,7 +437,7 @@ void ShowMainMenu(int iSlot)
 			SetTarget(iSlot, iTarget);
 			StartCheck(iSlot, iTarget);
 		}
-		else if(iItem == 7)
+		else if(iItem == 7 && !bCommand)
 		{
 			g_pAdmin->ShowAdminLastCategoryMenu(iSlot);
 		}
@@ -532,7 +532,7 @@ void LoadConfig()
 	g_pUtils->RegCommand(g_PLID, {}, vecCommands, [](int iSlot, const char* szContent) {
 		if(g_pAdmin->HasPermission(iSlot, g_szAdminMenuFlag))
 		{
-			ShowMainMenu(iSlot);
+			ShowMainMenu(iSlot, true);
 		}
 		return true;
 	});
@@ -772,7 +772,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.4";
+	return "1.0.5";
 }
 
 const char* CheckCheats::GetDate()
