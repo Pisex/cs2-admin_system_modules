@@ -489,7 +489,7 @@ void SelectTeamMenu(int iSlot, int iTarget, bool bSwitch)
 			OnItemSelect(iSlot, "players", "changeteam", "changeteam");
 		}
 	});
-	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot);
+	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot, true, true);
 }
 
 void SlapMenu(int iSlot, int iTarget)
@@ -516,7 +516,7 @@ void SlapMenu(int iSlot, int iTarget)
 			OnItemSelect(iSlot, "players", "slap", "slap");
 		}
 	});
-	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot);
+	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot, true, true);
 }
 
 std::string GetRandomName()
@@ -604,7 +604,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 			g_pAdminApi->ShowAdminLastCategoryMenu(iSlot);
 		}
 	});
-	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot);
+	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot, true, true);
 }
 
 void Players::AllPluginsLoaded()
@@ -629,7 +629,7 @@ void Players::AllPluginsLoaded()
 		engine->ServerCommand(sBuffer.c_str());
 		return;
 	}
-	g_pPlayersApi = (IPlayersApi *)g_SMAPI->MetaFactory(Players_INTERFACE, &ret, NULL);
+	g_pPlayersApi = (IPlayersApi *)g_SMAPI->MetaFactory(PLAYERS_INTERFACE, &ret, NULL);
 	if (ret == META_IFACE_FAILED)
 	{
 		g_pUtils->ErrorLog("[%s] Missing Players system plugin", GetLogTag());

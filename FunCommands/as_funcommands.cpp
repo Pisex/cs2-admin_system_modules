@@ -921,7 +921,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!freeze"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/freeze")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -948,7 +948,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!unfreeze"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/freeze")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -963,7 +963,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!gravity"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/gravity")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/gravity")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -983,7 +983,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!scale"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/scale")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/scale")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -1003,7 +1003,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!hp"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/hp")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/hp")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -1023,7 +1023,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!armor"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/armor")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/armor")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -1043,7 +1043,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!speed"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/speed")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/speed")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -1063,7 +1063,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!god"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/god")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/god")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 3)
@@ -1083,7 +1083,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!bury"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/bury")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/bury")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -1098,7 +1098,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!unbury"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/unbury")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/unbury")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -1113,7 +1113,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!blind"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/blind")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -1140,7 +1140,7 @@ void FunCommands::AllPluginsLoaded()
 	});
 
 	g_pUtils->RegCommand(g_PLID, {}, {"!unblind"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(g_PLID, "@admin/blind")) return true;
+		if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
 		if(args.ArgC() < 2)
@@ -1163,7 +1163,7 @@ const char* FunCommands::GetLicense()
 
 const char* FunCommands::GetVersion()
 {
-	return "1.1";
+	return "1.1.1";
 }
 
 const char* FunCommands::GetDate()

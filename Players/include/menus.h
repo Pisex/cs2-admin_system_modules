@@ -13,6 +13,9 @@ class CEntitySystem;
 class CGlobalVars;
 class IGameEvent;
 class IGameEventManager2;
+struct CTakeDamageInfoContainer;
+class CTakeDamageInfo;
+class IGameEventListener2;
 
 /////////////////////////////////////////////////////////////////
 ///////////////////////      PLAYERS     //////////////////////////
@@ -20,7 +23,7 @@ class IGameEventManager2;
 
 typedef std::function<void(int iSlot, uint64 iSteamID64)> OnClientAuthorizedCallback;
 
-#define Players_INTERFACE "IPlayersApi"
+#define PLAYERS_INTERFACE "IPlayersApi"
 class IPlayersApi
 {
 public:
@@ -43,6 +46,10 @@ public:
     virtual const char* GetPlayerName(int iSlot) = 0;
     virtual void SetPlayerName(int iSlot, const char* szName) = 0;
     virtual void SetMoveType(int iSlot, MoveType_t moveType) = 0;
+    virtual void EmitSound(std::vector<int> vPlayers, CEntityIndex ent, std::string sound_name, int pitch, float volume) = 0;
+	virtual void EmitSound(int iSlot, CEntityIndex ent, std::string sound_name, int pitch, float volume) = 0;
+	virtual void StopSoundEvent(int iSlot, const char* sound_name) = 0;
+    virtual IGameEventListener2* GetLegacyGameEventListener(int iSlot) = 0;
 };
 
 /////////////////////////////////////////////////////////////////
@@ -113,6 +120,7 @@ public:
     virtual void CollisionRulesChanged(CBaseEntity* pEnt) = 0;
     virtual void TeleportEntity(CBaseEntity* pEnt, const Vector *position, const QAngle *angles, const Vector *velocity) = 0;
     virtual void HookIsHearingClient(SourceMM::PluginId id, OnHearingClientCallback callback) = 0;
+    virtual const char* GetVersion() = 0;
 };
 
 /////////////////////////////////////////////////////////////////
@@ -177,6 +185,8 @@ public:
 	virtual void SetCallback(Menu& hMenu, MenuCallbackFunc func) = 0;
     virtual void ClosePlayerMenu(int iSlot) = 0;
     virtual std::string escapeString(const std::string& input) = 0;
+    virtual bool IsMenuOpen(int iSlot) = 0;
+	virtual void DisplayPlayerMenu(Menu& hMenu, int iSlot, bool bClose = true, bool bReset = true) = 0;
 };
 
 /////////////////////////////////////////////////////////////////

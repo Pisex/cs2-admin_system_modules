@@ -578,8 +578,8 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 	int iReason = pEvent->GetInt("reason");
 	int iTarget = g_iTarget[iSlot];
 	if(iTarget == -1) return;
-	
-	if(g_bAdmin[iSlot])
+	bool bAdmin = g_bAdmin[iSlot];
+	if(bAdmin)
 	{
 		if(g_hOverlays[iTarget])
 			g_pUtils->RemoveEntity(g_hOverlays[iTarget]);
@@ -596,16 +596,22 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 		ResetUserData(iTarget);
 		return;
 	}
+
 	const char* sName = g_pPlayers->GetPlayerName(iSlot);
 	uint64 iSteamID = g_pPlayers->GetSteamID64(iSlot);
-	if(g_Leave.bAutoBan && (g_Leave.iMin <= g_iStage[iSlot] || g_Leave.iMin == -1) && (g_Leave.iMax > g_iStage[iSlot] || g_Leave.iMax == -1))
+	int iStage = g_iStage[iSlot];
+	const char* szContact = strdup(g_szContact[iSlot]);
+	ResetUserData(iSlot);
+	ResetUserData(iTarget);
+
+	if(g_Leave.bAutoBan && (g_Leave.iMin <= iStage || g_Leave.iMin == -1) && (g_Leave.iMax > iStage || g_Leave.iMax == -1))
 	{
-		if(g_bAdmin[iSlot])
+		if(bAdmin)
 			g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iSlot);
 		else
 			g_pAdmin->AddPlayerPunishment(iSlot, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iTarget);
 	}
-	else if(g_Leave.bLeaveMenu && !g_bAdmin[iSlot])
+	else if(g_Leave.bLeaveMenu && !bAdmin)
 	{
 		Menu hMenu;
 		g_pMenus->SetTitleMenu(hMenu, g_pAdmin->GetTranslation("CC_Title_Leave"));
@@ -613,12 +619,12 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 		{
 			if(it.second.bShow)
 			{
-				g_pMenus->AddItemMenu(hMenu, std::to_string(it.first).c_str(), it.second.sReason.c_str(), (it.second.iMin == -1 || it.second.iMin <= g_iStage[iSlot]) && (it.second.iMax == -1 || g_iStage[iSlot] < it.second.iMax)?ITEM_DEFAULT:ITEM_DISABLED);
+				g_pMenus->AddItemMenu(hMenu, std::to_string(it.first).c_str(), it.second.sReason.c_str(), (it.second.iMin == -1 || it.second.iMin <= iStage) && (it.second.iMax == -1 || iStage < it.second.iMax)?ITEM_DEFAULT:ITEM_DISABLED);
 			}
 		}
 		g_pMenus->SetBackMenu(hMenu, false);
 		g_pMenus->SetExitMenu(hMenu, true);
-		g_pMenus->SetCallback(hMenu, [iSteamID, szName = strdup(sName), szContact = strdup(g_szContact[iSlot])](const char* szBack, const char* szFront, int iItem, int iSlot) {
+		g_pMenus->SetCallback(hMenu, [iSteamID, szName = strdup(sName), szContact](const char* szBack, const char* szFront, int iItem, int iSlot) {
 			if(iItem < 7)
 			{
 				int iReason = std::atoi(szBack);
@@ -654,10 +660,8 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 				}
 			}
 		});
-		g_pMenus->DisplayPlayerMenu(hMenu, g_bAdmin[iSlot]?iSlot:iTarget);
+		g_pMenus->DisplayPlayerMenu(hMenu, bAdmin?iSlot:iTarget);
 	}
-	ResetUserData(iSlot);
-	ResetUserData(iTarget);
 }
 
 void OnAdminCoreLoaded()
@@ -772,7 +776,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.5";
+	return "1.0.6";
 }
 
 const char* CheckCheats::GetDate()
