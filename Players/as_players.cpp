@@ -782,7 +782,7 @@ void Players::AllPluginsLoaded()
 		KickPlayer(iSlot, iTarget);
 		return true;
 	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!kill"}, [](int iSlot, const char* szContent) {
+	g_pUtils->RegCommand(g_PLID, {}, {"!slay"}, [](int iSlot, const char* szContent) {
 		if(!g_pAdminApi->HasPermission(iSlot, "@admin/kill")) return true;
 		CCommand args;
 		args.Tokenize(szContent);
@@ -806,7 +806,7 @@ const char* Players::GetLicense()
 
 const char* Players::GetVersion()
 {
-	return "1.0.1";
+	return "1.0.1.1";
 }
 
 const char* Players::GetDate()

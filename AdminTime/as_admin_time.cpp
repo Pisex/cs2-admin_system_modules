@@ -102,6 +102,7 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 }
 
 void OnAdminConnect(int iSlot) {
+	if(!g_pAdminApi->IsAdmin(iSlot)) return;
 	uint64 iSteamID64 = g_pPlayersApi->GetSteamID64(iSlot);
 	char szQuery[256];
 	g_SMAPI->Format(szQuery, sizeof(szQuery), "INSERT INTO `as_admin_time` (`admin_id`, `admin_name`, `connect_time`, `server_id`) VALUES ('%llu', '%s', %d, '%d');", iSteamID64, g_pPlayersApi->GetPlayerName(iSlot), time(nullptr), g_iServerID);
@@ -154,7 +155,7 @@ const char* ATime::GetLicense()
 
 const char* ATime::GetVersion()
 {
-	return "1.0.1";
+	return "1.0.2";
 }
 
 const char* ATime::GetDate()
