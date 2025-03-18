@@ -250,13 +250,13 @@ void EndCheckMenu(int iSlot)
 							'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
 							g_iServerID, 
 							g_pPlayers->GetSteamID64(iTarget),
-							g_pPlayers->GetPlayerName(iTarget),
+							g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(iTarget)).c_str(),
 							g_pPlayers->GetSteamID64(iSlot),
-							g_pPlayers->GetPlayerName(iSlot),
+							g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(iSlot)).c_str(),
 							g_iStart[iSlot],
 							std::time(nullptr),
 							sReason.sReason2.c_str(),
-							g_szContact[iSlot]);
+							g_pAdmin->GetMySQLConnection()->Escape(g_szContact[iSlot]).c_str());
 						g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
 					}
 					char szBuffer[128];
