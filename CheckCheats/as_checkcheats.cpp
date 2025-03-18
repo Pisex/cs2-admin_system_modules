@@ -776,7 +776,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.6";
+	return "1.0.6.1";
 }
 
 const char* CheckCheats::GetDate()
