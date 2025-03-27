@@ -255,7 +255,7 @@ void EndCheckMenu(int iSlot)
 							g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(iSlot)).c_str(),
 							g_iStart[iSlot],
 							std::time(nullptr),
-							sReason.sReason2.c_str(),
+							sReason.sReason.c_str(),
 							g_pAdmin->GetMySQLConnection()->Escape(g_szContact[iSlot]).c_str());
 						g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
 					}
@@ -597,8 +597,8 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 		return;
 	}
 
-	const char* sName = g_pPlayers->GetPlayerName(iSlot);
-	uint64 iSteamID = g_pPlayers->GetSteamID64(iSlot);
+	const char* sName = g_pPlayers->GetPlayerName(bAdmin?iTarget:iSlot);
+	uint64 iSteamID = g_pPlayers->GetSteamID64(bAdmin?iTarget:iSlot);
 	int iStage = g_iStage[iSlot];
 	const char* szContact = strdup(g_szContact[iSlot]);
 	ResetUserData(iSlot);
@@ -610,6 +610,28 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 			g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iSlot);
 		else
 			g_pAdmin->AddPlayerPunishment(iSlot, RT_BAN, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str(), iTarget);
+
+		if(g_bDB) {
+			char szBuffer[1024];
+			g_SMAPI->Format(szBuffer, sizeof(szBuffer), "INSERT INTO `checkcheats_stats` (\
+				`server_id`, `player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `datestart`, `date_end`, `verdict`, `suspect_discord`) VALUES (\
+				'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
+				g_iServerID,
+				iSteamID, 
+				g_pAdmin->GetMySQLConnection()->Escape(sName).c_str(),
+				g_pPlayers->GetSteamID64(bAdmin?iSlot:iTarget),
+				g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(bAdmin?iSlot:iTarget)).c_str(),
+				g_iStart[iSlot],
+				std::time(0),
+				g_mReasons[g_Leave.iBanReason].sReason.c_str(),
+				g_pAdmin->GetMySQLConnection()->Escape(szContact).c_str());
+
+			g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
+		}
+		
+		char szBuffer[128];
+		g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%i %i %s", bAdmin?iTarget:iSlot, g_mReasons[g_Leave.iBanReason].iTime, g_mReasons[g_Leave.iBanReason].sReason2.c_str());
+		g_pAdmin->SendAction(bAdmin?iSlot:iTarget, "checkcheats", szBuffer);
 	}
 	else if(g_Leave.bLeaveMenu && !bAdmin)
 	{
@@ -644,13 +666,13 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 							'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
 							g_iServerID,
 							iSteamID, 
-							szName,
+							g_pAdmin->GetMySQLConnection()->Escape(szName).c_str(),
 							g_pPlayers->GetSteamID64(iSlot),
-							g_pPlayers->GetPlayerName(iSlot),
+							g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(iSlot)).c_str(),
 							g_iStart[iSlot],
 							std::time(0),
 							sReason.sReason.c_str(),
-							szContact);
+							g_pAdmin->GetMySQLConnection()->Escape(szContact).c_str());
 
 						g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
 					}
@@ -748,10 +770,49 @@ void CheckCheats::AllPluginsLoaded()
 					g_iTimer[g_iTarget[i]] = 0;
 					if(g_Timer.bAutoBan)
 					{
-						if(g_bAdmin[i])
+						if(g_bAdmin[i]) {
+							if(g_bDB) {
+								char szBuffer[1024];
+								g_SMAPI->Format(szBuffer, sizeof(szBuffer), "INSERT INTO `checkcheats_stats` (\
+									`server_id`, `player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `datestart`, `date_end`, `verdict`, `suspect_discord`) VALUES (\
+									'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
+									g_iServerID,
+									g_pPlayers->GetSteamID64(g_iTarget[i]),
+									g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(g_iTarget[i])).c_str(),
+									g_pPlayers->GetSteamID64(i),
+									g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(i)).c_str(),
+									g_iStart[i],
+									std::time(0),
+									g_mReasons[g_Timer.iBanReason].sReason.c_str(),
+									g_pAdmin->GetMySQLConnection()->Escape(g_szContact[i]).c_str());
+								g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
+							}
 							g_pAdmin->AddPlayerPunishment(g_iTarget[i], RT_BAN, g_mReasons[g_Timer.iBanReason].iTime, g_mReasons[g_Timer.iBanReason].sReason2.c_str(), i);
-						else
-							g_pAdmin->AddPlayerPunishment(i, RT_BAN, g_mReasons[g_Timer.iBanReason].iTime, g_mReasons[g_Timer.iBanReason].sReason2.c_str(), i);
+						}
+						else {
+							if(g_bDB) {
+								char szBuffer[1024];
+								g_SMAPI->Format(szBuffer, sizeof(szBuffer), "INSERT INTO `checkcheats_stats` (\
+									`server_id`, `player_steamid`, `player_name`, `admin_steamid`, `admin_name`, `datestart`, `date_end`, `verdict`, `suspect_discord`) VALUES (\
+									'%i', '%lld', '%s', '%lld', '%s', '%i', '%i', '%s', '%s')",
+									g_iServerID,
+									g_pPlayers->GetSteamID64(i),
+									g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(i)).c_str(),
+									g_pPlayers->GetSteamID64(g_iTarget[i]),
+									g_pAdmin->GetMySQLConnection()->Escape(g_pPlayers->GetPlayerName(g_iTarget[i])).c_str(),
+									g_iStart[i],
+									std::time(0),
+									g_mReasons[g_Timer.iBanReason].sReason.c_str(),
+									g_pAdmin->GetMySQLConnection()->Escape(g_szContact[i]).c_str());
+								g_pAdmin->GetMySQLConnection()->Query(szBuffer, [](ISQLQuery*){});
+							}
+
+							g_pAdmin->AddPlayerPunishment(i, RT_BAN, g_mReasons[g_Timer.iBanReason].iTime, g_mReasons[g_Timer.iBanReason].sReason2.c_str(), g_iTarget[i]);
+						}
+						
+						char szBuffer[128];
+						g_SMAPI->Format(szBuffer, sizeof(szBuffer), "%i %i %s", g_bAdmin[i]?g_iTarget[i]:i, g_mReasons[g_Timer.iBanReason].iTime, g_mReasons[g_Timer.iBanReason].sReason2.c_str());
+						g_pAdmin->SendAction(g_bAdmin[i]?i:g_iTarget[i], "checkcheats", szBuffer);
 					}
 				}
 				else
@@ -776,7 +837,7 @@ const char* CheckCheats::GetLicense()
 
 const char* CheckCheats::GetVersion()
 {
-	return "1.0.6.1";
+	return "1.0.6.2";
 }
 
 const char* CheckCheats::GetDate()
