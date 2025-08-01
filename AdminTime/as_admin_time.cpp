@@ -18,6 +18,10 @@ IMySQLConnection* g_pConnection;
 
 int g_iServerID;
 bool g_bReset;
+bool g_bSpecTime;
+
+int g_iTime[64];
+int g_iTimeJoined[64];
 
 CGameEntitySystem* GameEntitySystem()
 {
@@ -43,6 +47,7 @@ void LoadConfig()
 	}
 	g_iServerID = hKv->GetInt("server_id");
 	g_bReset = hKv->GetBool("reset", true);
+	g_bSpecTime = hKv->GetBool("spec_time", true);
 }
 
 bool ATime::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
@@ -84,9 +89,11 @@ void OnAdminCoreLoaded()
 		);",[](ISQLQuery *){});
 
 		
-		char szQuery[256];
-		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), g_iServerID);
-		g_pConnection->Query(szQuery,[](ISQLQuery *){});
+		if(g_bReset) {
+			char szQuery[256];
+			g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), g_iServerID);
+			g_pConnection->Query(szQuery,[](ISQLQuery *){});
+		}
 	}
 }
 
@@ -94,11 +101,20 @@ void OnPlayerDisconnect(const char* szName, IGameEvent* pEvent, bool bDontBroadc
 	int iSlot = pEvent->GetInt("userid");
 	uint64 iSteamID64 = g_pPlayersApi->GetSteamID64(iSlot);
 	
-	if(g_bReset) {
-		char szQuery[256];
+	char szQuery[256];
+	if(!g_bSpecTime) {
+		if(g_iTimeJoined[iSlot] > 0) {
+			g_iTime[iSlot] += std::time(nullptr) - g_iTimeJoined[iSlot];
+			g_iTimeJoined[iSlot] = 0;
+		}
+		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d WHERE `admin_id` = '%llu' AND `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), g_iTime[iSlot], iSteamID64, g_iServerID);
+	} else {
 		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_admin_time` SET `disconnect_time` = %d, `played_time` = %d - `connect_time` WHERE `admin_id` = '%llu' AND `disconnect_time` = -1 AND `server_id` = '%d';", time(nullptr), time(nullptr), iSteamID64, g_iServerID);
-		g_pConnection->Query(szQuery,[](ISQLQuery *){});
 	}
+	g_pConnection->Query(szQuery,[](ISQLQuery *){});
+
+	g_iTime[iSlot] = 0;
+	g_iTimeJoined[iSlot] = 0;
 }
 
 void OnAdminConnect(int iSlot) {
@@ -107,6 +123,50 @@ void OnAdminConnect(int iSlot) {
 	char szQuery[256];
 	g_SMAPI->Format(szQuery, sizeof(szQuery), "INSERT INTO `as_admin_time` (`admin_id`, `admin_name`, `connect_time`, `server_id`) VALUES ('%llu', '%s', %d, '%d');", iSteamID64, g_pPlayersApi->GetPlayerName(iSlot), time(nullptr), g_iServerID);
 	g_pConnection->Query(szQuery,[](ISQLQuery *){});
+}
+
+std::string StripQuotes(const std::string& str) {
+	if (str.length() >= 2 && str.front() == '"' && str.back() == '"') {
+		return str.substr(1, str.length() - 2);
+	}
+	return str;
+}
+
+std::string TrimTrailingQuote(const std::string& str) {
+	if (!str.empty() && str.back() == '"') {
+		return str.substr(0, str.length() - 1);
+	}
+	return str;
+}
+
+std::vector<std::string> SplitStringBySpace(const std::string& input) {
+	std::vector<std::string> tokens;
+	std::string current;
+	bool inQuotes = false;
+
+	for (size_t i = 0; i < input.size(); ++i) {
+		char ch = input[i];
+
+		if (ch == '"') {
+			inQuotes = !inQuotes;
+			continue;
+		}
+
+		if (std::isspace(static_cast<unsigned char>(ch)) && !inQuotes) {
+			if (!current.empty()) {
+				tokens.push_back(current);
+				current.clear();
+			}
+		} else {
+			current += ch;
+		}
+	}
+
+	if (!current.empty()) {
+		tokens.push_back(current);
+	}
+
+	return tokens;
 }
 
 void ATime::AllPluginsLoaded()
@@ -145,6 +205,32 @@ void ATime::AllPluginsLoaded()
 	g_pUtils->HookEvent(g_PLID, "player_disconnect", OnPlayerDisconnect);
 	g_pAdminApi->OnCoreLoaded(g_PLID, OnAdminCoreLoaded);
 	g_pAdminApi->OnAdminConnected(g_PLID, OnAdminConnect);
+	if(!g_bSpecTime) {
+		g_pUtils->RegCommand(g_PLID, { "jointeam" }, {}, [](int iSlot, const char* szContent) {
+			// CCommand arg;
+			// arg.Tokenize(szContent);
+			// if(arg.ArgC() > 0) {
+			// 	int iTeam = atoi(arg.Arg(0));
+			// 	if(g_iTimeJoined[iSlot] > 0 && iTeam == 1) {
+			// 		g_iTime[iSlot] += std::time(nullptr) - g_iTimeJoined[iSlot];
+			// 		g_iTimeJoined[iSlot] = 0;
+			// 	} else if(iTeam != 1 && g_iTimeJoined[iSlot] == 0) {
+			// 		g_iTimeJoined[iSlot] = std::time(nullptr);
+			// 	}
+			// }
+			std::vector<std::string> vecArgs = SplitStringBySpace(szContent);
+			if(vecArgs.size() > 0) {
+				int iTeam = std::stoi(vecArgs[0]);
+				if(g_iTimeJoined[iSlot] > 0 && iTeam == 1) {
+					g_iTime[iSlot] += std::time(nullptr) - g_iTimeJoined[iSlot];
+					g_iTimeJoined[iSlot] = 0;
+				} else if(iTeam != 1 && g_iTimeJoined[iSlot] == 0) {
+					g_iTimeJoined[iSlot] = std::time(nullptr);
+				}
+			}
+			return false;
+		});
+	}
 }
 
 ///////////////////////////////////////
@@ -155,7 +241,7 @@ const char* ATime::GetLicense()
 
 const char* ATime::GetVersion()
 {
-	return "1.0.2";
+	return "1.0.3";
 }
 
 const char* ATime::GetDate()

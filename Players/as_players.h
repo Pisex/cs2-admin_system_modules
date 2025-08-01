@@ -3,7 +3,6 @@
 
 #include <ISmmPlugin.h>
 #include <sh_vector.h>
-#include "utlvector.h"
 #include "ehandle.h"
 #include <iserver.h>
 #include <entity2/entitysystem.h>
@@ -11,7 +10,6 @@
 #include "vector.h"
 #include <deque>
 #include <functional>
-#include <utlstring.h>
 #include <KeyValues.h>
 #include "CCSPlayerController.h"
 #include "include/menus.h"

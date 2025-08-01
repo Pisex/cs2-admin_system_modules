@@ -72,7 +72,7 @@ private:
 	const char* GetDate();
 	const char* GetLogTag();
 private:
-	void OnCheckTransmit(CCheckTransmitInfo **ppInfoList, int infoCount, CBitVec<16384> &unionTransmitEdicts, const Entity2Networkable_t **pNetworkables, const uint16 *pEntityIndicies, int nEntities, bool bEnablePVSBits);
+	void OnCheckTransmit(class ISource2GameEntities* pThis, class CCheckTransmitInfoHack** ppInfoList, uint32_t infoCount, CBitVec<16384>& unionTransmitEdicts1, CBitVec<16384>& unionTransmitEdicts2, const Entity2Networkable_t** pNetworkables, const uint16* pEntityIndicies, uint32_t nEntities);
 };
 
 #endif //_INCLUDE_METAMOD_SOURCE_STUB_PLUGIN_H_

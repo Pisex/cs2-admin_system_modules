@@ -571,12 +571,12 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 			if(!strcmp(szLastItem[iSlot], "kill"))
 			{
 				KillPlayer(iSlot, iTarget);
-				OnItemSelect(iSlot, "players", "kill", "kill");
+				OnItemSelect(iSlot, "players", "kill", "reopen");
 			}
 			else if(!strcmp(szLastItem[iSlot], "kick"))
 			{
 				KickPlayer(iSlot, iTarget);
-				OnItemSelect(iSlot, "players", "kick", "kick");
+				OnItemSelect(iSlot, "players", "kick", "reopen");
 			}
 			else if(!strcmp(szLastItem[iSlot], "slap"))
 				SlapMenu(iSlot, iTarget);
@@ -592,7 +592,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 			else if(!strcmp(szLastItem[iSlot], "noclip"))
 			{
 				NoclipPlayer(iSlot, iTarget);
-				OnItemSelect(iSlot, "players", "noclip", "noclip");
+				OnItemSelect(iSlot, "players", "noclip", "reopen");
 			}
 			else if(!strcmp(szLastItem[iSlot], "who"))
 			{
@@ -604,7 +604,7 @@ void OnItemSelect(int iSlot, const char* szCategory, const char* szIdentity, con
 			g_pAdminApi->ShowAdminLastCategoryMenu(iSlot);
 		}
 	});
-	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot, true, true);
+	g_pMenusApi->DisplayPlayerMenu(hMenu, iSlot, true, !strcmp(szItem,"reopen")?false:true);
 }
 
 void Players::AllPluginsLoaded()
@@ -660,142 +660,142 @@ void Players::AllPluginsLoaded()
 	});
 
 	g_pUtils->StartupServer(g_PLID, StartupServer);
-	g_pUtils->RegCommand(g_PLID, {}, {"!who"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/who")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		WhoPlayer(iSlot, iTarget, false);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!noclip"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/noclip")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		NoclipPlayer(iSlot, iTarget);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!switchteam"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/switchteam")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 4)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		std::string arg2 = args[2];
-		if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
-			return true;
-		}
-		int iTeam = std::atoi(args[2]);
-		ChangePlayerTeam(iSlot, iTarget, iTeam, true);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!changeteam"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/changeteam")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 4)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		std::string arg2 = args[2];
-		if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
-			return true;
-		}
-		int iTeam = std::atoi(args[2]);
-		ChangePlayerTeam(iSlot, iTarget, iTeam, false);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!rename"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/rename")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 4)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRename"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		std::string sName = args.ArgS() + 1;
-		std::string arg1 = args[1];
-		sName.erase(0, arg1.length());
-		if (!sName.empty()) {
-			sName.pop_back();
-		}
-		ChangePlayerName(iSlot, iTarget, strdup(sName.c_str()));
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!slap"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/slap")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		std::string arg2 = args[2];
-		if(!arg2.empty() && (arg2.length() > 3 || !std::all_of(arg2.begin(), arg2.end(), ::isdigit))) {
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
-			return true;
-		}
-		int iDamage = std::atoi(args[2]);
-		SlapPlayer(iSlot, iTarget, iDamage);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!kick"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/kick")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		KickPlayer(iSlot, iTarget);
-		return true;
-	});
-	g_pUtils->RegCommand(g_PLID, {}, {"!slay"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/kill")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		KillPlayer(iSlot, iTarget);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!who"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/who")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	WhoPlayer(iSlot, iTarget, false);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!noclip"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/noclip")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	NoclipPlayer(iSlot, iTarget);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!switchteam"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/switchteam")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 4)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	std::string arg2 = args[2];
+	// 	if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTeam = std::atoi(args[2]);
+	// 	ChangePlayerTeam(iSlot, iTarget, iTeam, true);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!changeteam"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/changeteam")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 4)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	std::string arg2 = args[2];
+	// 	if(!arg2.empty() && (arg2.length() != 1 || !isdigit(arg2.at(0)))) {
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSwitchTeam"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTeam = std::atoi(args[2]);
+	// 	ChangePlayerTeam(iSlot, iTarget, iTeam, false);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!rename"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/rename")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 4)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRename"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	std::string sName = args.ArgS() + 1;
+	// 	std::string arg1 = args[1];
+	// 	sName.erase(0, arg1.length());
+	// 	if (!sName.empty()) {
+	// 		sName.pop_back();
+	// 	}
+	// 	ChangePlayerName(iSlot, iTarget, strdup(sName.c_str()));
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!slap"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/slap")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	std::string arg2 = args[2];
+	// 	if(!arg2.empty() && (arg2.length() > 3 || !std::all_of(arg2.begin(), arg2.end(), ::isdigit))) {
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageSlap"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iDamage = std::atoi(args[2]);
+	// 	SlapPlayer(iSlot, iTarget, iDamage);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!kick"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/kick")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	KickPlayer(iSlot, iTarget);
+	// 	return true;
+	// });
+	// g_pUtils->RegCommand(g_PLID, {}, {"!slay"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/kill")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageDefault"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	KillPlayer(iSlot, iTarget);
+	// 	return true;
+	// });
 }
 
 ///////////////////////////////////////

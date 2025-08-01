@@ -920,239 +920,239 @@ void FunCommands::AllPluginsLoaded()
 		g_pAdminApi->RegisterItem("blind", "Item_Blind", "players", "@admin/blind", nullptr, OnItemSelect);
 	});
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!freeze"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Freeze"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid freeze time value\n");
-			return true;
-		}
-		float fTime = args.ArgC() > 2?std::atof(args[2]):0;
-		SetFreezy(iSlot, iTarget, true);
-		if(fTime > 0)
-		{
-			g_pUtils->CreateTimer(fTime, [iSlot, iTarget](){
-				SetFreezy(iSlot, iTarget, false);
-				return -1.0f;
-			});
-		}
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!freeze"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Freeze"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid freeze time value\n");
+	// 		return true;
+	// 	}
+	// 	float fTime = args.ArgC() > 2?std::atof(args[2]):0;
+	// 	SetFreezy(iSlot, iTarget, true);
+	// 	if(fTime > 0)
+	// 	{
+	// 		g_pUtils->CreateTimer(fTime, [iSlot, iTarget](){
+	// 			SetFreezy(iSlot, iTarget, false);
+	// 			return -1.0f;
+	// 		});
+	// 	}
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!unfreeze"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unfreeze"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		SetFreezy(iSlot, iTarget, false);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!unfreeze"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/freeze")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unfreeze"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	SetFreezy(iSlot, iTarget, false);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!gravity"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/gravity")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Gravity"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid gravity value\n");
-			return true;
-		}
-		float fGravity = std::atof(args[2]);
-		SetGravity(iSlot, iTarget, fGravity);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!gravity"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/gravity")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Gravity"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid gravity value\n");
+	// 		return true;
+	// 	}
+	// 	float fGravity = std::atof(args[2]);
+	// 	SetGravity(iSlot, iTarget, fGravity);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!scale"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/scale")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Scale"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid scale value\n");
-			return true;
-		}
-		float fScale = std::atof(args[2]);
-		SetScale(iSlot, iTarget, fScale);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!scale"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/scale")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Scale"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid scale value\n");
+	// 		return true;
+	// 	}
+	// 	float fScale = std::atof(args[2]);
+	// 	SetScale(iSlot, iTarget, fScale);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!hp"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/hp")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_HP"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid hp value\n");
-			return true;
-		}
-		int iHP = std::atoi(args[2]);
-		SetHP(iSlot, iTarget, iHP);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!hp"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/hp")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_HP"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid hp value\n");
+	// 		return true;
+	// 	}
+	// 	int iHP = std::atoi(args[2]);
+	// 	SetHP(iSlot, iTarget, iHP);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!armor"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/armor")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Armor"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid armor value\n");
-			return true;
-		}
-		int iArmor = std::atoi(args[2]);
-		SetArmor(iSlot, iTarget, iArmor);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!armor"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/armor")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Armor"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid armor value\n");
+	// 		return true;
+	// 	}
+	// 	int iArmor = std::atoi(args[2]);
+	// 	SetArmor(iSlot, iTarget, iArmor);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!speed"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/speed")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Speed"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid speed value\n");
-			return true;
-		}
-		float fSpeed = std::atof(args[2]);
-		SetSpeed(iSlot, iTarget, fSpeed);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!speed"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/speed")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Speed"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid speed value\n");
+	// 		return true;
+	// 	}
+	// 	float fSpeed = std::atof(args[2]);
+	// 	SetSpeed(iSlot, iTarget, fSpeed);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!god"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/god")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_God"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (strlen(args[2]) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid god value\n");
-			return true;
-		}
-		bool bGod = std::atoi(args[2]);
-		SetGod(iSlot, iTarget, bGod);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!god"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/god")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_God"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (strlen(args[2]) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid god value\n");
+	// 		return true;
+	// 	}
+	// 	bool bGod = std::atoi(args[2]);
+	// 	SetGod(iSlot, iTarget, bGod);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!bury"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/bury")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Bury"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		BuryPlayer(iSlot, iTarget);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!bury"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/bury")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Bury"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	BuryPlayer(iSlot, iTarget);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!unbury"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/unbury")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unbury"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		UnburyPlayer(iSlot, iTarget);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!unbury"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/unbury")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unbury"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	UnburyPlayer(iSlot, iTarget);
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!blind"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Blind"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
-			g_pUtils->PrintToConsole(iSlot, "Invalid blind time value\n");
-			return true;
-		}
-		float fTime = args.ArgC() > 2?std::atof(args[2]):0;
-		BlindPlayer(iSlot, iTarget, true);
-		if(fTime > 0)
-		{
-			g_pUtils->CreateTimer(fTime, [iSlot, iTarget](){
-				BlindPlayer(iSlot, iTarget, false);
-				return -1.0f;
-			});
-		}
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!blind"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Blind"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	if (args.ArgC() > 2 && strlen(args.Arg(2)) > 10) {
+	// 		g_pUtils->PrintToConsole(iSlot, "Invalid blind time value\n");
+	// 		return true;
+	// 	}
+	// 	float fTime = args.ArgC() > 2?std::atof(args[2]):0;
+	// 	BlindPlayer(iSlot, iTarget, true);
+	// 	if(fTime > 0)
+	// 	{
+	// 		g_pUtils->CreateTimer(fTime, [iSlot, iTarget](){
+	// 			BlindPlayer(iSlot, iTarget, false);
+	// 			return -1.0f;
+	// 		});
+	// 	}
+	// 	return true;
+	// });
 
-	g_pUtils->RegCommand(g_PLID, {}, {"!unblind"}, [](int iSlot, const char* szContent){
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
-		CCommand args;
-		args.Tokenize(szContent);
-		if(args.ArgC() < 2)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unblind"), args[0]);
-			return true;
-		}
-		int iTarget = FindUser(args[1]);
-		if(iTarget == -1) return true;
-		BlindPlayer(iSlot, iTarget, false);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!unblind"}, [](int iSlot, const char* szContent){
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/blind")) return true;
+	// 	CCommand args;
+	// 	args.Tokenize(szContent);
+	// 	if(args.ArgC() < 2)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("Usage_Unblind"), args[0]);
+	// 		return true;
+	// 	}
+	// 	int iTarget = FindUser(args[1]);
+	// 	if(iTarget == -1) return true;
+	// 	BlindPlayer(iSlot, iTarget, false);
+	// 	return true;
+	// });
 }
 
 ///////////////////////////////////////

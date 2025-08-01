@@ -171,18 +171,18 @@ void Maps::AllPluginsLoaded()
 	});
 	
 	g_pUtils->StartupServer(g_PLID, StartupServer);
-	g_pUtils->RegCommand(g_PLID, {}, {"!map"}, [](int iSlot, const char* szContent) {
-		if(!g_pAdminApi->HasPermission(iSlot, "@admin/maps")) return true;
-		CCommand arg;
-		arg.Tokenize(szContent);
-		if(arg.ArgC() < 3)
-		{
-			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageChangeMap"), arg[0]);
-			return true;
-		}
-		ChangeMap(iSlot, arg[1]);
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!map"}, [](int iSlot, const char* szContent) {
+	// 	if(!g_pAdminApi->HasPermission(iSlot, "@admin/maps")) return true;
+	// 	CCommand arg;
+	// 	arg.Tokenize(szContent);
+	// 	if(arg.ArgC() < 3)
+	// 	{
+	// 		g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageChangeMap"), arg[0]);
+	// 		return true;
+	// 	}
+	// 	ChangeMap(iSlot, arg[1]);
+	// 	return true;
+	// });
 
 	
 	{

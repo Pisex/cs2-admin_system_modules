@@ -99,25 +99,25 @@ void Rcon::AllPluginsLoaded()
 		return;
 	}
 	g_pUtils->StartupServer(g_PLID, StartupServer);
-	g_pUtils->RegCommand(g_PLID, {}, {"!rcon"}, [](int iSlot, const char* szContent) {
-		if(g_pAdminApi->HasPermission(iSlot, "@admin/rcon"))
-		{
-			CCommand arg;
-			arg.Tokenize(szContent);
-			if(arg.ArgC() < 2)
-			{
-				g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRcon"), arg.Arg(0));
-				return true;
-			}
-			std::string szCommand = arg.ArgS();
-			if (!szCommand.empty()) {
-				szCommand.pop_back();
-			}
-			engine->ServerCommand(szCommand.c_str());
-			g_pAdminApi->SendAction(iSlot, "rcon", szCommand.c_str());
-		}
-		return true;
-	});
+	// g_pUtils->RegCommand(g_PLID, {}, {"!rcon"}, [](int iSlot, const char* szContent) {
+	// 	if(g_pAdminApi->HasPermission(iSlot, "@admin/rcon"))
+	// 	{
+	// 		CCommand arg;
+	// 		arg.Tokenize(szContent);
+	// 		if(arg.ArgC() < 2)
+	// 		{
+	// 			g_pUtils->PrintToChat(iSlot, g_pAdminApi->GetTranslation("UsageRcon"), arg.Arg(0));
+	// 			return true;
+	// 		}
+	// 		std::string szCommand = arg.ArgS();
+	// 		if (!szCommand.empty()) {
+	// 			szCommand.pop_back();
+	// 		}
+	// 		engine->ServerCommand(szCommand.c_str());
+	// 		g_pAdminApi->SendAction(iSlot, "rcon", szCommand.c_str());
+	// 	}
+	// 	return true;
+	// });
 }
 
 ///////////////////////////////////////

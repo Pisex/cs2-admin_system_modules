@@ -68,8 +68,9 @@ CHandle<CParticleSystem> g_hOverlays[64];
 ///////////////////////////////////////////
 ///////////////////////////////////////////
 
+int g_iCheckTransmit;
 
-SH_DECL_HOOK7_void(ISource2GameEntities, CheckTransmit, SH_NOATTRIB, 0, CCheckTransmitInfo **, int, CBitVec<16384> &, const Entity2Networkable_t **, const uint16 *, int, bool);
+SH_DECL_MANUALHOOK8_void(CheckTransmit, 13, 0, 0, ISource2GameEntities*, CCheckTransmitInfoHack**, uint32_t, CBitVec<16384>&, CBitVec<16384>&, const Entity2Networkable_t**, const uint16*, uint32_t);
 
 
 void CheckMenu(int iSlot);
@@ -159,7 +160,8 @@ bool CheckCheats::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	GET_V_IFACE_CURRENT(GetFileSystemFactory, g_pFullFileSystem, IFileSystem, FILESYSTEM_INTERFACE_VERSION);
 	GET_V_IFACE_ANY(GetServerFactory, g_pSource2GameEntities, ISource2GameEntities, SOURCE2GAMEENTITIES_INTERFACE_VERSION);
 
-	SH_ADD_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
+	// SH_ADD_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
+	g_iCheckTransmit = SH_ADD_MANUALDVPHOOK(CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
 
 	g_SMAPI->AddListener( this, this );
 	
@@ -168,15 +170,15 @@ bool CheckCheats::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, b
 	return true;
 }
 
-void CheckCheats::OnCheckTransmit(CCheckTransmitInfo **ppInfoList, int infoCount, CBitVec<16384> &unionTransmitEdicts, const Entity2Networkable_t **pNetworkables, const uint16 *pEntityIndicies, int nEntities, bool bEnablePVSBits)
+void CheckCheats::OnCheckTransmit(class ISource2GameEntities* pThis, class CCheckTransmitInfoHack** ppInfoList, uint32_t infoCount, CBitVec<16384>& unionTransmitEdicts1, CBitVec<16384>& unionTransmitEdicts2, const Entity2Networkable_t** pNetworkables, const uint16* pEntityIndicies, uint32_t nEntities)
 {
 	if (!g_pEntitySystem || !g_szOverlay[0])
 		return;
 
-	for (int i = 0; i < infoCount; i++)
+	for (auto i = 0u; i < infoCount; i++)
 	{
-		auto &pInfo = ppInfoList[i];
-		int iPlayerSlot = (int)*((uint8 *)pInfo + 584);
+		const auto& pInfo = ppInfoList[i];
+		int iPlayerSlot = pInfo->m_nPlayerSlot;
 		CCSPlayerController* pSelfController = CCSPlayerController::FromSlot(iPlayerSlot);
 		if (!pSelfController || !pSelfController->IsConnected())
 			continue;
@@ -196,7 +198,8 @@ void CheckCheats::OnCheckTransmit(CCheckTransmitInfo **ppInfoList, int infoCount
 
 bool CheckCheats::Unload(char *error, size_t maxlen)
 {
-	SH_REMOVE_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
+	// SH_REMOVE_HOOK(ISource2GameEntities, CheckTransmit, g_pSource2GameEntities, SH_MEMBER(this, &CheckCheats::OnCheckTransmit), true);
+	SH_REMOVE_HOOK_ID(g_iCheckTransmit);
 	ConVar_Unregister();
 	
 	return true;
@@ -351,19 +354,19 @@ void StartCheck(int iSlot, int iTarget)
 	if(g_szSound[0]) engine->ClientCommand(iTarget, "play %s", g_szSound);
 	if(g_szOverlay[0])
 	{
-		CCSPlayerController* pController = CCSPlayerController::FromSlot(iTarget);
-		if(!pController) return;
-		CCSPlayerPawn* pPlayerPawn = pController->GetPlayerPawn();
-		if(!pPlayerPawn) return;
-		CParticleSystem* pEnt = (CParticleSystem*)g_pUtils->CreateEntityByName("info_particle_system", -1);
-		if(!pEnt) return;
-		pEnt->m_bStartActive(true);
-		pEnt->m_iszEffectName(g_szOverlay);
-		Vector vecOrigin = pPlayerPawn->GetAbsOrigin();
-		g_pUtils->TeleportEntity(pEnt, &vecOrigin, nullptr, nullptr);
-		g_pUtils->DispatchSpawn(pEnt, nullptr);
-		g_pUtils->AcceptEntityInput(pEnt, "FollowEntity", "!activator", pPlayerPawn, pEnt);
-		g_hOverlays[iTarget] = CHandle<CParticleSystem>(pEnt);
+		// CCSPlayerController* pController = CCSPlayerController::FromSlot(iTarget);
+		// if(!pController) return;
+		// CCSPlayerPawn* pPlayerPawn = pController->GetPlayerPawn();
+		// if(!pPlayerPawn) return;
+		// CParticleSystem* pEnt = (CParticleSystem*)g_pUtils->CreateEntityByName("info_particle_system", -1);
+		// if(!pEnt) return;
+		// pEnt->m_bStartActive(true);
+		// pEnt->m_iszEffectName(g_szOverlay);
+		// Vector vecOrigin = pPlayerPawn->GetAbsOrigin();
+		// g_pUtils->TeleportEntity(pEnt, &vecOrigin, nullptr, nullptr);
+		// g_pUtils->DispatchSpawn(pEnt, nullptr);
+		// g_pUtils->AcceptEntityInput(pEnt, "FollowEntity", "!activator", pPlayerPawn, pEnt);
+		// g_hOverlays[iTarget] = CHandle<CParticleSystem>(pEnt);
 	}
 	if(g_bAutoMove)
 	{
@@ -443,6 +446,50 @@ void ShowMainMenu(int iSlot, bool bCommand = false)
 		}
 	});
 	g_pMenus->DisplayPlayerMenu(hMenu, iSlot);
+}
+
+std::string StripQuotes(const std::string& str) {
+	if (str.length() >= 2 && str.front() == '"' && str.back() == '"') {
+		return str.substr(1, str.length() - 2);
+	}
+	return str;
+}
+
+std::string TrimTrailingQuote(const std::string& str) {
+	if (!str.empty() && str.back() == '"') {
+		return str.substr(0, str.length() - 1);
+	}
+	return str;
+}
+
+std::vector<std::string> SplitStringBySpace(const std::string& input) {
+	std::vector<std::string> tokens;
+	std::string current;
+	bool inQuotes = false;
+
+	for (size_t i = 0; i < input.size(); ++i) {
+		char ch = input[i];
+
+		if (ch == '"') {
+			inQuotes = !inQuotes;
+			continue;
+		}
+
+		if (std::isspace(static_cast<unsigned char>(ch)) && !inQuotes) {
+			if (!current.empty()) {
+				tokens.push_back(current);
+				current.clear();
+			}
+		} else {
+			current += ch;
+		}
+	}
+
+	if (!current.empty()) {
+		tokens.push_back(current);
+	}
+
+	return tokens;
 }
 
 void LoadConfig()
@@ -540,17 +587,20 @@ void LoadConfig()
 	g_pUtils->RegCommand(g_PLID, {}, {g_szContactCommand}, [](int iSlot, const char* szContent) {
 		if(g_iTarget[iSlot] != -1 && g_szSocial[iSlot][0] && !g_szContact[iSlot][0] && !g_bAdmin[iSlot])
 		{
-			CCommand arg;
-			arg.Tokenize(szContent);
-			if(arg.ArgC() < 3)
+			// CCommand arg;
+			// arg.Tokenize(szContent);
+			std::vector<std::string> vecArgs = SplitStringBySpace(szContent);
+			// if(arg.ArgC() < 3)
+			if(vecArgs.size() < 2)
 			{
-				g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("Usage_Contact"), arg[0], g_mSocials[g_szSocial[iSlot]].sExample.c_str());
+				g_pUtils->PrintToChat(iSlot, g_pAdmin->GetTranslation("Usage_Contact"), vecArgs[0].c_str(), g_mSocials[g_szSocial[iSlot]].sExample.c_str());
 				return true;
 			}
-			std::string sContact = arg.ArgS();
+			std::string sContact = szContent;
+			sContact.erase(0, vecArgs[0].length() + 1);
 			if(sContact.size())
 				sContact.pop_back();
-			//Clear space at the beginning of the string if it exists
+			
 			if(sContact[0] == ' ') while(sContact[0] == ' ') sContact.erase(0, 1);
 			if(sContact.size() < g_mSocials[g_szSocial[iSlot]].iMin || sContact.size() > g_mSocials[g_szSocial[iSlot]].iMax)
 			{
