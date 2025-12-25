@@ -159,5 +159,5 @@
 ```
 
 Требования:
-[Utils](https://github.com/Pisex/cs2-menus/releases)
-[Admin System](https://github.com/Pisex/cs2-admin_system/releases)
+- [Utils](https://github.com/Pisex/cs2-menus/releases)
+- [Admin System](https://github.com/Pisex/cs2-admin_system/releases)
