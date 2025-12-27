@@ -3,9 +3,11 @@
 #include <cctype>
 #include <ctime>
 #include <cstring>
+#include <deque>
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include "as_warnsystem.h"
 #include "metamod_oslink.h"
 #include "schemasystem/schemasystem.h"
@@ -37,6 +39,7 @@ struct WarnConfig
 	std::vector<std::string> vReasons = {"Warning"};
 	std::vector<int> vReasonExpire = {iExpireSeconds};
 	bool bUseDB = true;
+	bool bAllowDuplicateReason = true;
 	int iServerID = 0;
 	std::string sCommand = "!warn";
 	std::string sConsoleCommand = "warn";
@@ -59,8 +62,20 @@ struct WarnEntry
 	std::string sAdminName;
 };
 
+struct RecentDisconnect
+{
+	uint64 iSteam = 0;
+	std::string sName;
+	time_t tDisconnected = 0;
+};
+
 WarnConfig g_Config;
 std::map<std::string, std::vector<WarnEntry>> g_WarnStorage;
+static std::deque<RecentDisconnect> g_RecentDisconnects;
+static size_t g_MaxRecentDisconnects = 10;
+
+static std::string SteamToString(uint64 id);
+static bool HasActiveReason(uint64 steam, const std::string& reason);
 
 template<typename... Args>
 static void ChatMsg(int iSlot, const char* szKey, Args... args)
@@ -140,6 +155,35 @@ static std::string ToLower(const std::string& s)
 	return out;
 }
 
+static bool CanAdminPunish(int iAdminSlot, int iTargetSlot)
+{
+	if(iAdminSlot < 0 || iTargetSlot < 0) return true;
+	const int immunityType = g_pAdmin->GetImmunityType();
+	if(immunityType == 0) return true;
+	if(!g_pAdmin->IsAdmin(iTargetSlot)) return true;
+	const int adminImm = g_pAdmin->GetAdminImmunity(iAdminSlot);
+	const int targetImm = g_pAdmin->GetAdminImmunity(iTargetSlot);
+
+	switch(immunityType)
+	{
+		case 1: 
+			return adminImm >= targetImm;
+		case 2:
+			return adminImm > targetImm;
+		case 3:
+			return false;
+		default:
+			return true;
+	}
+}
+
+static bool CheckImmunityOrNotify(int iAdminSlot, int iTargetSlot)
+{
+	if(CanAdminPunish(iAdminSlot, iTargetSlot)) return true;
+	ChatMsg(iAdminSlot, "Chat_ImmunityBlocked");
+	return false;
+}
+
 static std::string FormatDurationShort(int seconds)
 {
 	if(seconds <= 0) return g_pAdmin->GetTranslation("Menu_WarnExpireNever");
@@ -193,6 +237,30 @@ static std::string FormatExpireDuration(int seconds)
 {
 	if(seconds <= 0) return g_pAdmin->GetTranslation("Menu_WarnExpireNever");
 	return FormatDurationShort(seconds);
+}
+
+static bool GetExistingReasonInfo(uint64 steam, const std::string& reason, std::string& outExpire)
+{
+	const auto it = g_WarnStorage.find(SteamToString(steam));
+	if(it == g_WarnStorage.end()) return false;
+	const time_t now = std::time(nullptr);
+	for(auto rit = it->second.rbegin(); rit != it->second.rend(); ++rit)
+	{
+		const WarnEntry& w = *rit;
+		if(w.sReason != reason) continue;
+		if(w.tExpire != 0 && w.tExpire <= now) continue;
+		int remaining = w.tExpire == 0 ? -1 : static_cast<int>(w.tExpire - now);
+		if(remaining < 0 && w.tExpire != 0) remaining = 0;
+		outExpire = (w.tExpire == 0) ? g_pAdmin->GetTranslation("Menu_WarnExpireNever") : FormatDurationShort(remaining);
+		return true;
+	}
+	return false;
+}
+
+static bool HasActiveReason(uint64 steam, const std::string& reason)
+{
+	std::string dummy;
+	return GetExistingReasonInfo(steam, reason, dummy);
 }
 
 CGameEntitySystem* GameEntitySystem()
@@ -251,17 +319,19 @@ static void SaveWarningToDB(const std::string& steam, const WarnEntry& entry, co
 	});
 }
 
-static void MarkWarningRemovedInDB(const std::string& steam, int warnId)
+static void MarkWarningRemovedInDB(const std::string& steam, int warnId, uint64 adminSteam, const char* szAdminName)
 {
 	if(!g_Config.bUseDB || !g_pAdmin) return;
-	char szQuery[256];
+	const char* szName = szAdminName ? szAdminName : "";
+	std::string sEscapedName = g_pAdmin->GetMySQLConnection()->Escape(szName);
+	char szQuery[512];
 	if(warnId > 0)
 	{
-		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_warnsystem` SET `removed`=1,`removed_at`=UNIX_TIMESTAMP() WHERE `id`=%i;", warnId);
+		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_warnsystem` SET `removed`=1,`removed_at`=UNIX_TIMESTAMP(),`removed_by_steamid`='%llu',`removed_by_name`='%s' WHERE `id`=%i;", adminSteam, sEscapedName.c_str(), warnId);
 	}
 	else
 	{
-		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_warnsystem` SET `removed`=1,`removed_at`=UNIX_TIMESTAMP() WHERE `player_steamid`='%s' AND `removed`=0 ORDER BY `id` DESC LIMIT 1;", steam.c_str());
+		g_SMAPI->Format(szQuery, sizeof(szQuery), "UPDATE `as_warnsystem` SET `removed`=1,`removed_at`=UNIX_TIMESTAMP(),`removed_by_steamid`='%llu',`removed_by_name`='%s' WHERE `player_steamid`='%s' AND `removed`=0 ORDER BY `id` DESC LIMIT 1;", adminSteam, sEscapedName.c_str(), steam.c_str());
 	}
 	g_pAdmin->GetMySQLConnection()->Query(szQuery, [](ISQLQuery*){});
 }
@@ -304,7 +374,7 @@ static void LoadConfig()
 	const int iCoreServerID = LoadCorePunishServerID();
 
 	g_Config.iMaxWarnings = pKv->GetInt("max_warnings", g_Config.iMaxWarnings);
-	g_Config.iBanDuration = pKv->GetInt("ban_minutes", g_Config.iBanDuration);
+	g_Config.iBanDuration = pKv->GetInt("ban_duration", g_Config.iBanDuration);
 	g_Config.sBanReason = pKv->GetString("ban_reason", g_Config.sBanReason.c_str());
 	g_Config.iExpireSeconds = pKv->GetInt("expire_seconds", g_Config.iExpireSeconds);
 	g_Config.sCommand = pKv->GetString("command", g_Config.sCommand.c_str());
@@ -315,6 +385,11 @@ static void LoadConfig()
 	g_Config.sFlag = pKv->GetString("flag", g_Config.sFlag.c_str());
 	g_Config.bCustomCategory = pKv->GetBool("custom_category", g_Config.bCustomCategory);
 	g_Config.sCategory = pKv->GetString("category", g_Config.sCategory.c_str());
+
+	int iRecentLimit = pKv->GetInt("offline_recent_limit", static_cast<int>(g_MaxRecentDisconnects));
+	if(iRecentLimit < 1) iRecentLimit = 1;
+	if(iRecentLimit > 50) iRecentLimit = 50;
+	g_MaxRecentDisconnects = static_cast<size_t>(iRecentLimit);
 
 	const char* pszNotify = pKv->GetString("notify_channels", "chat");
 	std::vector<std::string> vNotify = Split(pszNotify, '|');
@@ -327,6 +402,8 @@ static void LoadConfig()
 	}
 	if(iNotify == 0) iNotify = NOTIFY_CHAT;
 	g_Config.iNotifyChannels = iNotify;
+
+	g_Config.bAllowDuplicateReason = pKv->GetBool("allow_duplicate_reason", g_Config.bAllowDuplicateReason);
 
 	if(!g_Config.bCustomCategory)
 	{
@@ -366,10 +443,8 @@ static void LoadConfig()
 	}
 }
 
-static void AddWarning(int iAdmin, int iTarget, const std::string& sReason, int iReasonExpire)
+static WarnEntry BuildWarnEntry(int iAdmin, const std::string& sReason, int iReasonExpire)
 {
-	const uint64 steamTarget = g_pPlayers->GetSteamID64(iTarget);
-	std::string sSteam = SteamToString(steamTarget);
 	const time_t now = std::time(nullptr);
 	const int iExpireSeconds = iReasonExpire > 0 ? iReasonExpire : g_Config.iExpireSeconds;
 	const time_t expire = iExpireSeconds > 0 ? now + iExpireSeconds : 0;
@@ -380,25 +455,71 @@ static void AddWarning(int iAdmin, int iTarget, const std::string& sReason, int 
 	entry.tExpire = expire;
 	entry.iAdminSteam = g_pPlayers->GetSteamID64(iAdmin);
 	entry.sAdminName = g_pPlayers->GetPlayerName(iAdmin);
+	return entry;
+}
 
+static void AddWarningInternal(const std::string& sSteam, const char* szPlayerName, const WarnEntry& entry, int iAdmin, int iTargetSlot)
+{
 	auto& vec = g_WarnStorage[sSteam];
 	vec.push_back(entry);
 
-	NotifyMsg(iTarget, "Chat_WarnReceived", static_cast<int>(vec.size()), g_Config.iMaxWarnings, sReason.c_str());
-	NotifyMsg(iAdmin, "Chat_WarnIssued", g_pPlayers->GetPlayerName(iTarget), static_cast<int>(vec.size()), g_Config.iMaxWarnings);
+	const char* szTargetName = szPlayerName ? szPlayerName : "";
 
-	if(!g_Config.sWarnSound.empty())
+	if(iTargetSlot >= 0)
 	{
-		engine->ClientCommand(iTarget, "play %s", g_Config.sWarnSound.c_str());
+		NotifyMsg(iTargetSlot, "Chat_WarnReceived", static_cast<int>(vec.size()), g_Config.iMaxWarnings, entry.sReason.c_str());
+		NotifyMsg(iAdmin, "Chat_WarnIssued", szTargetName, static_cast<int>(vec.size()), g_Config.iMaxWarnings);
+
+		if(!g_Config.sWarnSound.empty())
+		{
+			engine->ClientCommand(iTargetSlot, "play %s", g_Config.sWarnSound.c_str());
+		}
+	}
+	else
+	{
+		ChatMsg(iAdmin, "Chat_WarnIssuedOffline", szTargetName, static_cast<int>(vec.size()), g_Config.iMaxWarnings);
 	}
 
-	SaveWarningToDB(sSteam, entry, g_pPlayers->GetPlayerName(iTarget));
+	SaveWarningToDB(sSteam, entry, szTargetName);
 
 	if(g_Config.iMaxWarnings > 0 && static_cast<int>(vec.size()) >= g_Config.iMaxWarnings)
 	{
-		g_pAdmin->AddPlayerPunishment(iTarget, RT_BAN, g_Config.iBanDuration, g_Config.sBanReason.c_str(), iAdmin);
-		NotifyMsgAll("Chat_WarnBan", g_pPlayers->GetPlayerName(iTarget));
+		if(iTargetSlot >= 0)
+		{
+			g_pAdmin->AddPlayerPunishment(iTargetSlot, RT_BAN, g_Config.iBanDuration, g_Config.sBanReason.c_str(), iAdmin);
+		}
+		else
+		{
+			g_pAdmin->AddOfflinePlayerPunishment(sSteam.c_str(), szTargetName, RT_BAN, g_Config.iBanDuration, g_Config.sBanReason.c_str(), iAdmin);
+		}
+		NotifyMsgAll("Chat_WarnBan", szTargetName);
 	}
+}
+
+static void AddWarning(int iAdmin, int iTarget, const std::string& sReason, int iReasonExpire)
+{
+	if(!CheckImmunityOrNotify(iAdmin, iTarget)) return;
+	const uint64 steamTarget = g_pPlayers->GetSteamID64(iTarget);
+	if(!g_Config.bAllowDuplicateReason && HasActiveReason(steamTarget, sReason))
+	{
+		ChatMsg(iAdmin, "Chat_WarnDuplicateBlocked");
+		return;
+	}
+	std::string sSteam = SteamToString(steamTarget);
+	WarnEntry entry = BuildWarnEntry(iAdmin, sReason, iReasonExpire);
+	AddWarningInternal(sSteam, g_pPlayers->GetPlayerName(iTarget), entry, iAdmin, iTarget);
+}
+
+static void AddOfflineWarning(int iAdmin, uint64 steamTarget, const char* szPlayerName, const std::string& sReason, int iReasonExpire)
+{
+	if(!g_Config.bAllowDuplicateReason && HasActiveReason(steamTarget, sReason))
+	{
+		ChatMsg(iAdmin, "Chat_WarnDuplicateBlocked");
+		return;
+	}
+	std::string sSteam = SteamToString(steamTarget);
+	WarnEntry entry = BuildWarnEntry(iAdmin, sReason, iReasonExpire);
+	AddWarningInternal(sSteam, szPlayerName, entry, iAdmin, -1);
 }
 
 static void RemoveWarningByIndex(int iAdmin, int iTarget, int idx)
@@ -419,7 +540,7 @@ static void RemoveWarningByIndex(int iAdmin, int iTarget, int idx)
 
 	int warnId = it->second[idx].iID;
 	it->second.erase(it->second.begin() + idx);
-	MarkWarningRemovedInDB(sSteam, warnId);
+	MarkWarningRemovedInDB(sSteam, warnId, g_pPlayers->GetSteamID64(iAdmin), g_pPlayers->GetPlayerName(iAdmin));
 	NotifyMsg(iTarget, "Chat_WarnRemovedTarget", static_cast<int>(it->second.size()));
 	NotifyMsg(iAdmin, "Chat_WarnRemovedAdmin", g_pPlayers->GetPlayerName(iTarget));
 }
@@ -454,8 +575,92 @@ static void LoadWarningsFromDB(uint64 steamid)
 	});
 }
 
+static void AddRecentDisconnect(uint64 steam, const char* szName)
+{
+	if(steam == 0) return;
+	const char* szSafeName = (szName && szName[0]) ? szName : "Unknown";
+
+	int slot = g_pPlayers->FindPlayer(steam);
+	if(slot != -1 && g_pPlayers->IsConnected(slot) && g_pPlayers->IsInGame(slot))
+	{
+		return;
+	}
+
+	g_RecentDisconnects.erase(std::remove_if(g_RecentDisconnects.begin(), g_RecentDisconnects.end(), [steam](const RecentDisconnect& rec){
+		return rec.iSteam == steam;
+	}), g_RecentDisconnects.end());
+
+	RecentDisconnect rec;
+	rec.iSteam = steam;
+	rec.sName = szSafeName;
+	rec.tDisconnected = std::time(nullptr);
+	g_RecentDisconnects.push_front(rec);
+	if(g_MaxRecentDisconnects > 0 && g_RecentDisconnects.size() > g_MaxRecentDisconnects)
+	{
+		g_RecentDisconnects.pop_back();
+	}
+
+	LoadWarningsFromDB(steam);
+}
+
+static void HandlePlayerDisconnect(IGameEvent* pEvent)
+{
+	if(!pEvent) return;
+	if(pEvent->GetBool("bot", false)) return;
+
+	uint64 steam = pEvent->GetUint64("xuid");
+	if(steam == 0) steam = pEvent->GetUint64("steamid");
+	if(steam == 0)
+	{
+		const char* szSteamStr = pEvent->GetString("steamid");
+		if((!szSteamStr || !szSteamStr[0])) szSteamStr = pEvent->GetString("networkid");
+		if(szSteamStr && szSteamStr[0])
+		{
+			steam = std::strtoull(szSteamStr, nullptr, 10);
+		}
+	}
+	if(steam == 0) return;
+
+	const char* szName = pEvent->GetString("name");
+	std::string sNameCopy = (szName && szName[0]) ? szName : "Unknown";
+
+	g_pUtils->NextFrame([steam, sNameCopy](){
+		int slot = g_pPlayers->FindPlayer(steam);
+		if(slot != -1 && g_pPlayers->IsConnected(slot) && g_pPlayers->IsInGame(slot))
+		{
+			return;
+		}
+		AddRecentDisconnect(steam, sNameCopy.c_str());
+	});
+}
+
+static int FindRecentIndex(uint64 steam)
+{
+	for(size_t i = 0; i < g_RecentDisconnects.size(); ++i)
+	{
+		if(g_RecentDisconnects[i].iSteam == steam) return static_cast<int>(i);
+	}
+	return -1;
+}
+
+static void UpdateRecentDisconnectName(uint64 steam, const char* szName)
+{
+	if(!szName || !szName[0]) return;
+	for(auto& rec : g_RecentDisconnects)
+	{
+		if(rec.iSteam == steam)
+		{
+			rec.sName = szName;
+			break;
+		}
+	}
+}
+
 static void ShowMyWarningsMenu(int iSlot);
 static void ShowRemoveWarningMenu(int iSlot, int iTarget);
+static void ShowOfflinePlayerMenu(int iSlot, bool bCommand);
+static void ShowOfflineReasonMenu(int iSlot, int iRecentIdx);
+static void ShowOfflineReasonConfirmMenu(int iSlot, int iRecentIdx, int idx);
 
 static void ShowMyWarningDetail(int iSlot, int idx)
 {
@@ -642,7 +847,25 @@ static void ShowReasonConfirmMenu(int iSlot, int iTarget, int idx)
 	g_SMAPI->Format(szExpire, sizeof(szExpire), g_pAdmin->GetTranslation("Menu_WarnExpires"), sExpire.c_str());
 
 	g_pMenus->AddItemMenu(hMenu, "exp", szExpire, ITEM_DISABLED);
-	g_pMenus->AddItemMenu(hMenu, "confirm", g_pAdmin->GetTranslation("Menu_IssueWarning"));
+
+	bool bDuplicate = false;
+	std::string sDupExpire;
+	if(GetExistingReasonInfo(g_pPlayers->GetSteamID64(iTarget), g_Config.vReasons[idx], sDupExpire))
+	{
+		bDuplicate = true;
+		char sDup[192];
+		g_SMAPI->Format(sDup, sizeof(sDup), g_pAdmin->GetTranslation("Menu_WarnDuplicate"), sDupExpire.c_str());
+		g_pMenus->AddItemMenu(hMenu, "dup", sDup, ITEM_DISABLED);
+		if(!g_Config.bAllowDuplicateReason)
+		{
+			g_pMenus->AddItemMenu(hMenu, "block", g_pAdmin->GetTranslation("Menu_WarnDuplicateBlocked"), ITEM_DISABLED);
+		}
+	}
+
+	if(!bDuplicate || g_Config.bAllowDuplicateReason)
+	{
+		g_pMenus->AddItemMenu(hMenu, "confirm", g_pAdmin->GetTranslation("Menu_IssueWarning"));
+	}
 
 	g_pMenus->SetBackMenu(hMenu, true);
 	g_pMenus->SetExitMenu(hMenu, true);
@@ -661,7 +884,162 @@ static void ShowReasonConfirmMenu(int iSlot, int iTarget, int idx)
 	g_pMenus->DisplayPlayerMenu(hMenu, iSlot, true, true);
 }
 
+static void ShowOfflineReasonConfirmMenu(int iSlot, int iRecentIdx, int idx)
+{
+	if(idx < 0 || idx >= static_cast<int>(g_Config.vReasons.size()))
+	{
+		ShowOfflineReasonMenu(iSlot, iRecentIdx);
+		return;
+	}
+	if(iRecentIdx < 0 || iRecentIdx >= static_cast<int>(g_RecentDisconnects.size()))
+	{
+		ShowOfflinePlayerMenu(iSlot, false);
+		return;
+	}
+
+	const auto& info = g_RecentDisconnects[iRecentIdx];
+
+	Menu hMenu;
+	g_pMenus->SetTitleMenu(hMenu, g_pAdmin->GetTranslation("Menu_ConfirmReason"));
+
+	int iExpire = idx < static_cast<int>(g_Config.vReasonExpire.size()) ? g_Config.vReasonExpire[idx] : g_Config.iExpireSeconds;
+	std::string sExpire = FormatExpireDuration(iExpire);
+	char szExpire[160];
+	g_SMAPI->Format(szExpire, sizeof(szExpire), g_pAdmin->GetTranslation("Menu_WarnExpires"), sExpire.c_str());
+
+	g_pMenus->AddItemMenu(hMenu, "exp", szExpire, ITEM_DISABLED);
+
+	bool bDuplicate = false;
+	std::string sDupExpire;
+	if(GetExistingReasonInfo(info.iSteam, g_Config.vReasons[idx], sDupExpire))
+	{
+		bDuplicate = true;
+		char sDup[192];
+		g_SMAPI->Format(sDup, sizeof(sDup), g_pAdmin->GetTranslation("Menu_WarnDuplicate"), sDupExpire.c_str());
+		g_pMenus->AddItemMenu(hMenu, "dup", sDup, ITEM_DISABLED);
+		if(!g_Config.bAllowDuplicateReason)
+		{
+			g_pMenus->AddItemMenu(hMenu, "block", g_pAdmin->GetTranslation("Menu_WarnDuplicateBlocked"), ITEM_DISABLED);
+		}
+	}
+
+	if(!bDuplicate || g_Config.bAllowDuplicateReason)
+	{
+		g_pMenus->AddItemMenu(hMenu, "confirm", g_pAdmin->GetTranslation("Menu_IssueWarning"));
+	}
+
+	g_pMenus->SetBackMenu(hMenu, true);
+	g_pMenus->SetExitMenu(hMenu, true);
+	g_pMenus->SetCallback(hMenu, [iRecentIdx, idx, iExpire](const char* szBack, const char*, int iItem, int iSlot){
+		if(iItem < 7 && !strcmp(szBack, "confirm"))
+		{
+			if(iRecentIdx < 0 || iRecentIdx >= static_cast<int>(g_RecentDisconnects.size())) return;
+			const auto& info = g_RecentDisconnects[iRecentIdx];
+			AddOfflineWarning(iSlot, info.iSteam, info.sName.c_str(), g_Config.vReasons[idx], iExpire);
+			g_pMenus->ClosePlayerMenu(iSlot);
+		}
+		else if(iItem == 7)
+		{
+			ShowOfflineReasonMenu(iSlot, iRecentIdx);
+		}
+	});
+
+	g_pMenus->DisplayPlayerMenu(hMenu, iSlot, true, true);
+}
+
+static void ShowOfflineReasonMenu(int iSlot, int iRecentIdx)
+{
+	if(iRecentIdx < 0 || iRecentIdx >= static_cast<int>(g_RecentDisconnects.size()))
+	{
+		ShowOfflinePlayerMenu(iSlot, false);
+		return;
+	}
+
+	const auto& info = g_RecentDisconnects[iRecentIdx];
+
+	Menu hMenu;
+	char szTitle[128];
+	g_SMAPI->Format(szTitle, sizeof(szTitle), g_pAdmin->GetTranslation("Menu_WarningsFor"), info.sName.c_str(), GetWarningCount(info.iSteam), g_Config.iMaxWarnings);
+	g_pMenus->SetTitleMenu(hMenu, szTitle);
+
+	for(size_t i = 0; i < g_Config.vReasons.size(); ++i)
+	{
+		g_pMenus->AddItemMenu(hMenu, std::to_string(i).c_str(), g_Config.vReasons[i].c_str());
+	}
+
+	g_pMenus->SetBackMenu(hMenu, true);
+	g_pMenus->SetExitMenu(hMenu, true);
+	g_pMenus->SetCallback(hMenu, [iRecentIdx](const char* szBack, const char*, int iItem, int iSlot){
+		if(iItem < 7)
+		{
+			int idx = std::atoi(szBack);
+			if(idx >= 0 && idx < static_cast<int>(g_Config.vReasons.size()))
+			{
+				ShowOfflineReasonConfirmMenu(iSlot, iRecentIdx, idx);
+			}
+		}
+		else if(iItem == 7)
+		{
+			ShowOfflinePlayerMenu(iSlot, false);
+		}
+	});
+
+	g_pMenus->DisplayPlayerMenu(hMenu, iSlot, true, true);
+}
+
 static void ShowPlayerMenu(int iSlot, bool bCommand);
+
+static void ShowOfflinePlayerMenu(int iSlot, bool bCommand)
+{
+	Menu hMenu;
+	g_pMenus->SetTitleMenu(hMenu, g_pAdmin->GetTranslation("Menu_SelectOfflinePlayer"));
+
+	std::vector<size_t> vAvailable;
+	for(size_t i = 0; i < g_RecentDisconnects.size(); ++i)
+	{
+		int slot = g_pPlayers->FindPlayer(g_RecentDisconnects[i].iSteam);
+		if(slot != -1 && g_pPlayers->IsConnected(slot) && g_pPlayers->IsInGame(slot))
+		{
+			continue;
+		}
+		vAvailable.push_back(i);
+	}
+
+	if(vAvailable.empty())
+	{
+		g_pMenus->AddItemMenu(hMenu, "none", g_pAdmin->GetTranslation("Menu_NoOfflinePlayers"), ITEM_DISABLED);
+	}
+	else
+	{
+		for(size_t idx : vAvailable)
+		{
+			const auto& info = g_RecentDisconnects[idx];
+			int iCount = GetWarningCount(info.iSteam);
+			char szText[192];
+			g_SMAPI->Format(szText, sizeof(szText), "%s (%i)", info.sName.c_str(), iCount);
+			g_pMenus->AddItemMenu(hMenu, std::to_string(static_cast<int>(idx)).c_str(), szText);
+		}
+	}
+
+	g_pMenus->SetBackMenu(hMenu, true);
+	g_pMenus->SetExitMenu(hMenu, true);
+	g_pMenus->SetCallback(hMenu, [bCommand](const char* szBack, const char*, int iItem, int iSlot){
+		if(iItem < 7)
+		{
+			int idx = std::atoi(szBack);
+			if(idx >= 0 && idx < static_cast<int>(g_RecentDisconnects.size()))
+			{
+				ShowOfflineReasonMenu(iSlot, idx);
+			}
+		}
+		else if(iItem == 7)
+		{
+			ShowPlayerMenu(iSlot, bCommand);
+		}
+	});
+
+	g_pMenus->DisplayPlayerMenu(hMenu, iSlot, true, true);
+}
 
 static void ShowActionsMenu(int iSlot, int iTarget)
 {
@@ -701,6 +1079,7 @@ static void ShowPlayerMenu(int iSlot, bool bCommand)
 	Menu hMenu;
 	g_pMenus->SetTitleMenu(hMenu, g_pAdmin->GetTranslation("Menu_SelectPlayer"));
 	bool bAny = false;
+	bool bHasOffline = !g_RecentDisconnects.empty();
 	for(int i = 0; i < 64; ++i)
 	{
 		if(!g_pPlayers->IsConnected(i) || g_pPlayers->IsFakeClient(i) || !g_pPlayers->IsInGame(i)) continue;
@@ -712,9 +1091,14 @@ static void ShowPlayerMenu(int iSlot, bool bCommand)
 		g_pMenus->AddItemMenu(hMenu, std::to_string(i).c_str(), szText);
 	}
 
-	if(!bAny)
+	if(!bAny && !bHasOffline)
 	{
 		g_pMenus->AddItemMenu(hMenu, "noplayers", g_pAdmin->GetTranslation("Menu_NoPlayers"), ITEM_DISABLED);
+	}
+
+	if(bHasOffline)
+	{
+		g_pMenus->AddItemMenu(hMenu, "offline", g_pAdmin->GetTranslation("Menu_OfflineWarnings"));
 	}
 
 	if(!bCommand) g_pMenus->SetBackMenu(hMenu, true);
@@ -722,8 +1106,15 @@ static void ShowPlayerMenu(int iSlot, bool bCommand)
 	g_pMenus->SetCallback(hMenu, [bCommand](const char* szBack, const char*, int iItem, int iSlot){
 		if(iItem < 7)
 		{
-			int iTarget = std::atoi(szBack);
-			ShowActionsMenu(iSlot, iTarget);
+			if(!strcmp(szBack, "offline"))
+			{
+				ShowOfflinePlayerMenu(iSlot, bCommand);
+			}
+			else
+			{
+				int iTarget = std::atoi(szBack);
+				ShowActionsMenu(iSlot, iTarget);
+			}
 		}
 		else if(iItem == 7 && !bCommand)
 		{
@@ -750,6 +1141,48 @@ static void RegisterAdminMenu()
 	});
 }
 
+static void AddColumnIfMissing(const char* szColumn, const char* szDefinition, const char* szAfterColumn)
+{
+	if(!g_Config.bUseDB || !g_pAdmin) return;
+
+	char szCheck[256];
+	g_SMAPI->Format(szCheck, sizeof(szCheck), "SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'as_warnsystem' AND column_name = '%s' LIMIT 1;", szColumn);
+
+	std::string sColumn = szColumn ? szColumn : "";
+	std::string sDefinition = szDefinition ? szDefinition : "";
+	std::string sAfter = szAfterColumn ? szAfterColumn : "";
+
+	g_pAdmin->GetMySQLConnection()->Query(szCheck, [sColumn, sDefinition, sAfter](ISQLQuery* pQuery){
+		bool bExists = false;
+		if(pQuery)
+		{
+			if(ISQLResult* pRes = pQuery->GetResultSet())
+			{
+				bExists = pRes->MoreRows();
+			}
+		}
+
+		if(bExists || sColumn.empty() || sDefinition.empty()) return;
+
+		char szAlter[512];
+		if(!sAfter.empty())
+		{
+			g_SMAPI->Format(szAlter, sizeof(szAlter), "ALTER TABLE `as_warnsystem` ADD COLUMN `%s` %s AFTER `%s`;", sColumn.c_str(), sDefinition.c_str(), sAfter.c_str());
+		}
+		else
+		{
+			g_SMAPI->Format(szAlter, sizeof(szAlter), "ALTER TABLE `as_warnsystem` ADD COLUMN `%s` %s;", sColumn.c_str(), sDefinition.c_str());
+		}
+
+		g_pAdmin->GetMySQLConnection()->Query(szAlter, [sColumn](ISQLQuery* pAlter){
+			if(!pAlter)
+			{
+				g_pUtils->ErrorLog("[%s] Failed to add column %s", g_warnsystem.GetLogTag(), sColumn.c_str());
+			}
+		});
+	});
+}
+
 static void CreateTables()
 {
 	if(!g_Config.bUseDB) return;
@@ -764,8 +1197,13 @@ static void CreateTables()
 		`created_at` INT UNSIGNED,\
 		`expires_at` INT UNSIGNED,\
 		`removed` TINYINT(1) DEFAULT 0,\
-		`removed_at` INT UNSIGNED DEFAULT 0\
+		`removed_at` INT UNSIGNED DEFAULT 0,\
+		`removed_by_steamid` VARCHAR(32) DEFAULT '',\
+		`removed_by_name` VARCHAR(64) DEFAULT ''\
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", [](ISQLQuery*){});
+	
+	AddColumnIfMissing("removed_by_steamid", "VARCHAR(32) DEFAULT ''", "removed_at");
+	AddColumnIfMissing("removed_by_name", "VARCHAR(64) DEFAULT ''", "removed_by_steamid");
 }
 
 bool warnsystem::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
@@ -834,6 +1272,9 @@ void warnsystem::AllPluginsLoaded()
 	g_pAdmin->OnCoreLoaded(g_PLID, CreateTables);
 
 	g_pUtils->LoadTranslations("warnsystem");
+	g_pUtils->HookEvent(g_PLID, "player_disconnect", [](const char* szName, IGameEvent* pEvent, bool bDontBroadcast){
+		HandlePlayerDisconnect(pEvent);
+	});
 
 	LoadConfig();
 	RegisterAdminMenu();
@@ -850,7 +1291,142 @@ void warnsystem::AllPluginsLoaded()
 
 	g_pUtils->RegCommand(g_PLID, consoleCommands, commands, [](int iSlot, const char* szContent){
 		if(!g_pAdmin->HasPermission(iSlot, g_Config.sFlag.c_str())) return true;
-		ShowPlayerMenu(iSlot, true);
+
+		std::string sInput = szContent ? szContent : "";
+		size_t pos = sInput.find_first_not_of(' ');
+		if(pos != std::string::npos) sInput.erase(0, pos); else sInput.clear();
+
+		std::vector<std::string> vCmds = Split(g_Config.sCommand, '|');
+		{
+			std::vector<std::string> vMore = Split(g_Config.sConsoleCommand, '|');
+			vCmds.insert(vCmds.end(), vMore.begin(), vMore.end());
+		}
+		std::vector<std::string> vCmdsNorm;
+		for(auto c : vCmds)
+		{
+			if(!c.empty() && (c[0] == '!' || c[0] == '/')) c.erase(0, 1);
+			vCmdsNorm.push_back(ToLower(c));
+		}
+		auto stripCommandToken = [&](std::vector<std::string>& words){
+			while(!words.empty())
+			{
+				std::string first = words.front();
+				if(!first.empty() && (first[0] == '!' || first[0] == '/')) first.erase(0, 1);
+				first = ToLower(first);
+				bool isCmd = false;
+				for(const auto& c : vCmdsNorm)
+				{
+					if(c == first)
+					{
+						isCmd = true;
+						break;
+					}
+				}
+				if(isCmd)
+				{
+					words.erase(words.begin());
+					continue;
+				}
+				break;
+			}
+		};
+
+		std::vector<std::string> args = Split(sInput, ' ');
+
+		size_t startIdx = 0;
+		auto normalizeToken = [](std::string s){ if(!s.empty() && (s[0] == '!' || s[0] == '/')) s.erase(0, 1); return s; };
+		while(startIdx < args.size())
+		{
+			std::string candidate = ToLower(normalizeToken(args[startIdx]));
+			bool isCmd = false;
+			for(const auto& c : vCmdsNorm)
+			{
+				if(c == candidate)
+				{
+					isCmd = true;
+					break;
+				}
+			}
+			if(isCmd)
+			{
+				++startIdx;
+				continue;
+			}
+			break;
+		}
+
+		if(startIdx >= args.size())
+		{
+			ShowPlayerMenu(iSlot, true);
+			return true;
+		}
+
+		std::string sSteamTok = normalizeToken(args[startIdx]);
+		uint64 targetSteam = std::strtoull(sSteamTok.c_str(), nullptr, 10);
+		if(targetSteam == 0)
+		{
+			ShowPlayerMenu(iSlot, true);
+			return true;
+		}
+
+		int targetSlot = g_pPlayers->FindPlayer(targetSteam);
+		bool targetOnline = (targetSlot != -1 && g_pPlayers->IsConnected(targetSlot) && g_pPlayers->IsInGame(targetSlot));
+
+		if(targetSteam == g_pPlayers->GetSteamID64(iSlot))
+		{
+			ChatMsg(iSlot, "Chat_SelfWarnNotAllowed");
+			return true;
+		}
+
+		if(args.size() >= startIdx + 3)
+		{
+			const std::string& sReasonArg = args[startIdx + 1];
+			int iCustomExpire = std::atoi(args[startIdx + 2].c_str());
+			if(iCustomExpire <= 0) iCustomExpire = g_Config.iExpireSeconds;
+
+			if(targetOnline)
+			{
+				if(!CheckImmunityOrNotify(iSlot, targetSlot)) return true;
+				AddWarning(iSlot, targetSlot, sReasonArg, iCustomExpire);
+			}
+			else
+			{
+				std::string sName = SteamToString(targetSteam);
+				int idx = FindRecentIndex(targetSteam);
+				if(idx == -1)
+				{
+					AddRecentDisconnect(targetSteam, sName.c_str());
+					idx = FindRecentIndex(targetSteam);
+				}
+				if(idx != -1) sName = g_RecentDisconnects[idx].sName;
+				AddOfflineWarning(iSlot, targetSteam, sName.c_str(), sReasonArg, iCustomExpire);
+			}
+			return true;
+		}
+
+		// Only steamid provided: open reason menu for that player (online) or offline entry
+		if(targetOnline)
+		{
+			if(!CheckImmunityOrNotify(iSlot, targetSlot)) return true;
+			ShowReasonMenu(iSlot, targetSlot);
+			return true;
+		}
+
+		int idx = FindRecentIndex(targetSteam);
+		if(idx == -1)
+		{
+			std::string sName = SteamToString(targetSteam);
+			AddRecentDisconnect(targetSteam, sName.c_str());
+			idx = FindRecentIndex(targetSteam);
+		}
+		if(idx != -1)
+		{
+			ShowOfflineReasonMenu(iSlot, idx);
+		}
+		else
+		{
+			ShowPlayerMenu(iSlot, true);
+		}
 		return true;
 	});
 
@@ -872,6 +1448,8 @@ void warnsystem::AllPluginsLoaded()
 
 	g_pPlayers->HookOnClientAuthorized(g_PLID, [](int iSlot, uint64 iSteam){
 		LoadWarningsFromDB(iSteam);
+		const char* szName = g_pPlayers->GetPlayerName(iSlot);
+		UpdateRecentDisconnectName(iSteam, szName);
 	});
 
 	g_pUtils->CreateTimer(5.0f, [](){
@@ -887,7 +1465,7 @@ const char* warnsystem::GetLicense()
 
 const char* warnsystem::GetVersion()
 {
-	return "1.0";
+	return "1.1";
 }
 
 const char* warnsystem::GetDate()
