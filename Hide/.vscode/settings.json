@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "*.sp": "sourcepawn",
+        "*.cfg": "valve-cfg",
+        "functional": "cpp"
+    }
+}

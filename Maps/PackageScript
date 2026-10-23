@@ -1,0 +1,30 @@
+# vim: set ts=2 sw=2 tw=99 noet ft=python: 
+import os
+
+builder.SetBuildFolder('package')
+# autoload layout: utils loads every .so under addons/plugins (recursively), no .vdf needed
+
+bin_folder_path = os.path.join('addons', 'plugins', 'admin')
+bin_folder = builder.AddFolder(bin_folder_path)
+
+for cxx in MMSPlugin.all_targets:
+  if cxx.target.arch == 'x86_64':
+    bin64_folder_path = os.path.join('addons', 'plugins', 'admin')
+    bin64_folder = builder.AddFolder(bin64_folder_path)
+
+pdb_list = []
+for task in MMSPlugin.binaries:
+  # This hardly assumes there's only 1 targetted platform and would be overwritten
+  # with whatever comes last if multiple are used!
+
+  if task.target.arch == 'x86_64':
+    builder.AddCopy(task.binary, bin64_folder)
+  else:
+    builder.AddCopy(task.binary, bin_folder)
+
+  if task.debug:
+    pdb_list.append(task.debug)
+
+
+configs_folder = builder.AddFolder(os.path.join('addons', 'configs', 'admin_system'))
+builder.AddCopy(os.path.join(builder.sourcePath, 'configs', 'admin_system', 'maps.ini'), configs_folder)
